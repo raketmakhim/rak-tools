@@ -1,19 +1,6 @@
 import { execSync } from "child_process";
-import { createInterface } from "readline";
-
-function run(cmd) {
-  return execSync(cmd, { encoding: "utf-8" }).trim();
-}
-
-function prompt(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer);
-    });
-  });
-}
+import { run, prompt } from "../util.mjs";
+import { getCached, setCached } from "../cache.mjs";
 
 export default async function commit() {
   const status = run("git status --porcelain");
@@ -32,12 +19,19 @@ export default async function commit() {
 
   const diff = run("git diff --cached");
 
-  console.log("\nGenerating commit message...\n");
-
-  const message = execSync(
-    `claude -p "Generate a concise git commit message for the following diff. Return ONLY the commit message, nothing else. Use conventional commit format (e.g. feat:, fix:, chore:). Keep the subject line under 72 characters. Add a blank line and a short body if needed."`,
-    { input: diff, encoding: "utf-8" }
-  ).trim();
+  const cached = getCached(diff, "commit");
+  let message;
+  if (cached) {
+    console.log("\n(using cached commit message)\n");
+    message = cached;
+  } else {
+    console.log("\nGenerating commit message...\n");
+    message = run(
+      `claude -p "Generate a concise git commit message for the following diff. Return ONLY the commit message, nothing else. Use conventional commit format (e.g. feat:, fix:, chore:). Keep the subject line under 72 characters. Add a blank line and a short body if needed."`,
+      { input: diff }
+    );
+    setCached(diff, "commit", message);
+  }
 
   console.log("--- Proposed commit message ---");
   console.log(message);

@@ -1,19 +1,4 @@
-import { execSync } from "child_process";
-import { createInterface } from "readline";
-
-function run(cmd) {
-  return execSync(cmd, { encoding: "utf-8" }).trim();
-}
-
-function prompt(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer);
-    });
-  });
-}
+import { run, prompt, c, getDefaultBranch } from "../util.mjs";
 
 export default async function clean() {
   const current = run("git branch --show-current");
@@ -59,25 +44,10 @@ export default async function clean() {
     process.exit(0);
   }
 
-  const red = (s) => `\x1b[31m${s}\x1b[0m`;
-
   for (const b of toDelete) {
     try { run(`git branch -d ${b}`); } catch { run(`git branch -D ${b}`); }
-    console.log(red(`  ${b} [deleted]`));
+    console.log(c.red(`  ${b} [deleted]`));
   }
 
   console.log("\nDone!");
-}
-
-function getDefaultBranch() {
-  try {
-    return run("gh repo view --json defaultBranchRef -q .defaultBranchRef.name");
-  } catch {
-    try {
-      const ref = run("git symbolic-ref refs/remotes/origin/HEAD");
-      return ref.replace("refs/remotes/origin/", "");
-    } catch {
-      return "main";
-    }
-  }
 }

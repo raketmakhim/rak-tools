@@ -2,30 +2,32 @@
 
 import { pathToFileURL } from "url";
 import { existsSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { join } from "path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 
 const command = process.argv[2];
 
 if (!command) {
-  console.log("Usage: rak <command>\n");
-  console.log("Commands:");
-  console.log("  commit    Generate a commit message and push changes");
-  console.log("  pr        Create a GitHub PR with AI-generated title/body");
-  console.log("  branch    Create and switch to an AI-named branch from current changes");
-  console.log("  clean     Delete all merged branches");
-  console.log("  review    AI code review of current changes");
-  console.log("\nRun 'rak <command> --help' for more info on a command.");
+  console.log(`Usage: rak <command>
+
+Commands:
+  commit    Generate a commit message and push changes
+  pr        Create a GitHub PR with AI-generated title/body
+  branch    Create and switch to an AI-named branch from current changes
+  clean     Delete all merged branches
+  review    AI code review of current changes
+  history   Show git history for a file
+  slim      Find ways to simplify and shorten code
+
+Run 'rak <command> --help' for more info on a command.`);
   process.exit(0);
 }
 
 const commandFile = join(__dirname, "commands", `${command}.mjs`);
 
 if (!existsSync(commandFile)) {
-  console.error(`Unknown command: ${command}`);
-  console.error(`Run 'rak' to see available commands.`);
+  console.error(`Unknown command: ${command}\nRun 'rak' to see available commands.`);
   process.exit(1);
 }
 

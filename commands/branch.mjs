@@ -1,8 +1,8 @@
 import { execSync } from "child_process";
 import { createInterface } from "readline";
 
-function run(cmd) {
-  return execSync(cmd, { encoding: "utf-8" }).trim();
+function run(cmd, opts) {
+  return execSync(cmd, { encoding: "utf-8", ...opts }).trim();
 }
 
 function prompt(question) {
@@ -24,30 +24,26 @@ export default async function branch() {
 
   const staged = run("git diff --cached");
   const unstaged = run("git diff");
-  const untracked = run("git ls-files --others --exclude-standard");
   const diff = [staged, unstaged].filter(Boolean).join("\n");
-
-  const summary = diff || `New files:\n${untracked}`;
+  const summary = diff || `New files:\n${run("git ls-files --others --exclude-standard")}`;
 
   console.log("Changes detected:\n");
   console.log(status);
   console.log("\nGenerating branch name...\n");
 
-  const name = execSync(
+  const name = run(
     `claude -p "Suggest a short git branch name for the following changes. Return ONLY the branch name, nothing else. Use kebab-case. Keep it under 40 characters. No prefixes like feature/ or fix/."`,
-    { input: summary, encoding: "utf-8" }
-  ).trim();
+    { input: summary }
+  );
 
   const answer = await prompt(`Branch name: ${name}\nAccept? (y/n/e to edit): `);
 
-  let finalName = name;
-
-  if (answer.toLowerCase() === "e") {
-    finalName = await prompt("Enter branch name: ");
-  } else if (answer.toLowerCase() !== "y") {
+  const choice = answer.toLowerCase();
+  if (choice !== "y" && choice !== "e") {
     console.log("Cancelled.");
     process.exit(0);
   }
+  const finalName = choice === "e" ? await prompt("Enter branch name: ") : name;
 
   run(`git checkout -b ${finalName}`);
   console.log(`\nSwitched to new branch: ${finalName}`);

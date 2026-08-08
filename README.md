@@ -61,6 +61,16 @@ Deletes local branches whose PRs were merged on GitHub.
 3. Lists matched branches for confirmation. Current branch and default branch are always kept.
 4. Deletes with `git branch -d`, falls back to `-D` for squash-merged branches.
 
+### `rak slim [file]`
+
+AI-powered code slimming &mdash; finds ways to shorten and simplify code.
+
+- `rak slim <file>` &mdash; analyzes that file for redundancy, verbosity, and over-abstraction.
+- `rak slim all` &mdash; analyzes every tracked code file in the repo, one by one.
+- `rak slim` (no args) &mdash; analyzes the current branch diff (same scope as `rak review`).
+
+Outputs `[CUT]` findings ranked by impact, each with before/after snippets. Focuses only on making code leaner &mdash; no style or naming suggestions.
+
 ## Adding commands
 
 Drop a file in `commands/`. Filename becomes the subcommand.
@@ -88,6 +98,9 @@ commands/
   branch.mjs         rak branch
   clean.mjs          rak clean
   commit.mjs         rak commit
+  history.mjs        rak history
   pr.mjs             rak pr
+  review.mjs         rak review
+  slim.mjs           rak slim
 package.json
 ```

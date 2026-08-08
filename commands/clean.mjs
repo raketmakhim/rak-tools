@@ -28,8 +28,8 @@ export default async function clean() {
     .map((b) => b.trim().replace(/^\*\s*/, ""))
     .filter((b) => b && b !== current && b !== defaultBranch);
 
-  // Branches whose remote tracking branch is gone (merged + deleted on GitHub)
-  const allBranches = run("git branch -vv")
+  // Branches whose remote was gone AND whose PR was merged on GitHub
+  const goneBranches = run("git branch -vv")
     .split("\n")
     .map((line) => {
       const match = line.trim().replace(/^\*\s*/, "").match(/^(\S+)\s+\S+\s+\[.+?: gone\]/);
@@ -37,7 +37,16 @@ export default async function clean() {
     })
     .filter((b) => b && b !== current && b !== defaultBranch);
 
-  const toDelete = [...new Set([...gitMerged, ...allBranches])];
+  const goneMerged = goneBranches.filter((b) => {
+    try {
+      const state = run(`gh pr view ${b} --json state -q .state`);
+      return state === "MERGED";
+    } catch {
+      return false;
+    }
+  });
+
+  const toDelete = [...new Set([...gitMerged, ...goneMerged])];
 
   if (!toDelete.length) {
     console.log("No merged branches to delete.");
@@ -63,12 +72,7 @@ export default async function clean() {
       run(`git branch -d ${b}`);
       console.log(red(`  ${b} [deleted]`));
     } catch {
-      try {
-        run(`git branch -D ${b}`);
-        console.log(red(`  ${b} [deleted (force)]`));
-      } catch {
-        console.log(grey(`  ${b} [skipped]`));
-      }
+      console.log(grey(`  ${b} [skipped — not fully merged]`));
     }
   }
 

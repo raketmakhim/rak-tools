@@ -1,5 +1,6 @@
 import { execSync, spawnSync } from "child_process";
 import { createInterface } from "readline";
+import commit from "./commit.mjs";
 
 function run(cmd) {
   return execSync(cmd, { encoding: "utf-8" }).trim();
@@ -22,6 +23,19 @@ export default async function pr() {
   if (branch === defaultBranch) {
     console.error(`Already on ${defaultBranch}. Switch to a feature branch first.`);
     process.exit(1);
+  }
+
+  // Check for uncommitted changes
+  const status = run("git status --porcelain");
+  if (status) {
+    console.log("Uncommitted changes detected:\n");
+    console.log(status);
+    const commitAnswer = await prompt("\nCommit these changes first? (y/n): ");
+    if (commitAnswer.toLowerCase() === "y") {
+      await commit();
+    } else {
+      console.log("Continuing without committing. Uncommitted changes won't be in the PR.\n");
+    }
   }
 
   // Check for existing PR

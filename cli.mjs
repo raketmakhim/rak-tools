@@ -14,6 +14,7 @@ if (!command) {
   console.log("Commands:");
   console.log("  commit    Generate a commit message and push changes");
   console.log("  pr        Create a GitHub PR with AI-generated title/body");
+  console.log("  clean     Delete all merged branches");
   console.log("\nRun 'rak <command> --help' for more info on a command.");
   process.exit(0);
 }

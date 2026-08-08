@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { createInterface } from "readline";
 
 function run(cmd) {
@@ -59,10 +59,17 @@ export default async function pr() {
   console.log("Generating PR title and description...\n");
 
   const fullDiff = run(`git diff ${defaultBranch}...HEAD`);
-  const input = `Commits:\n${log}\n\nDiff:\n${fullDiff}`;
+  const baseDiffStat = run(`git diff ${defaultBranch}...HEAD --stat --numstat`);
+  const newFiles = baseDiffStat.split("\n").filter((l) => l.match(/^(\d+)\t0\t/)).length;
+  const totalFiles = baseDiffStat.split("\n").filter((l) => l.match(/^\d+\t/)).length;
+  const context = newFiles === totalFiles
+    ? "All files in this diff are newly created — this is not a refactor or move."
+    : `${newFiles} of ${totalFiles} files are new additions.`;
+
+  const input = `Context: Branch "${branch}" → "${defaultBranch}". ${context}\n\nCommits:\n${log}\n\nDiff:\n${fullDiff}`;
 
   const generated = execSync(
-    `claude -p "Generate a GitHub pull request title and body for the following changes. Format your response EXACTLY as:\nTITLE: <title here>\nBODY:\n<body here>\n\nKeep the title under 72 characters. The body should have a short summary, then a bullet list of changes. Use markdown. Be concise."`,
+    `claude -p "Generate a GitHub pull request title and body for the following changes. Format your response EXACTLY as:\nTITLE: <title here>\nBODY:\n<body here>\n\nKeep the title under 72 characters. The body should have a short summary, then a bullet list of what was added or changed. Use markdown. Be concise. Pay attention to the Context line — if files are new, describe them as additions, not moves or refactors."`,
     { input, encoding: "utf-8" }
   ).trim();
 
@@ -88,9 +95,19 @@ export default async function pr() {
     process.exit(0);
   }
 
-  const result = run(
-    `gh pr create --title ${JSON.stringify(finalTitle)} --body ${JSON.stringify(body)} --base ${defaultBranch}`
-  );
+  const res = spawnSync("gh", [
+    "pr", "create",
+    "--title", finalTitle,
+    "--body", body,
+    "--base", defaultBranch,
+  ], { encoding: "utf-8" });
+
+  if (res.status !== 0) {
+    console.error(res.stderr?.trim() || "Failed to create PR.");
+    process.exit(1);
+  }
+
+  const result = res.stdout.trim();
 
   console.log(`\n${result}`);
 }

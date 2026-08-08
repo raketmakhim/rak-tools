@@ -1,0 +1,24 @@
+{
+  "name": "rak-tools",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "rak": "./cli.mjs"
+  },
+  "scripts": {
+    "commit": "node cli.mjs commit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raketmakhim/rak-tools.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/raketmakhim/rak-tools/issues"
+  },
+  "homepage": "https://github.com/raketmakhim/rak-tools#readme"
+}

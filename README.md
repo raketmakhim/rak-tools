@@ -6,6 +6,7 @@ Personal CLI toolbox. Subcommand-based: `rak <command>`.
 
 - Node.js 18+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (`npm i -g @anthropic-ai/claude-code`)
+- [GitHub CLI](https://cli.github.com/) (`winget install GitHub.cli`, then `gh auth login`)
 
 ## Install
 
@@ -30,6 +31,18 @@ AI-generated commit messages via Claude, then pushes.
 2. Pipes `git diff --cached` to Claude CLI to generate a conventional commit message.
 3. Displays the message. Prompts: `y` accept, `n` cancel, `e` edit manually.
 4. Commits and pushes. Sets upstream automatically on first push.
+
+### `rak pr`
+
+AI-generated pull request via Claude + GitHub CLI.
+
+**Flow:**
+1. Guards: must be on a feature branch, no existing PR.
+2. Pushes branch to origin if not already pushed.
+3. Gathers all commits and diff since divergence from default branch.
+4. Pipes to Claude CLI to generate a PR title and body.
+5. Displays the proposal. Prompts: `y` create, `n` cancel, `e` edit title.
+6. Creates the PR via `gh pr create`.
 
 ## Adding commands
 
@@ -56,5 +69,6 @@ No registration needed &mdash; the router discovers it by filename.
 cli.mjs              Entry point (rak binary)
 commands/
   commit.mjs         rak commit
+  pr.mjs             rak pr
 package.json
 ```

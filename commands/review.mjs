@@ -1,26 +1,15 @@
-import { execSync, spawnSync } from "child_process";
+import { execSync } from "child_process";
 import { writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
+import { run, getDefaultBranch, MAX_BUFFER } from "../util.mjs";
 import { getCached, setCached } from "../cache.mjs";
-
-const MAX_BUFFER = 10 * 1024 * 1024;
 
 const REVIEW_PROMPT = `You are a senior code reviewer. Review the following diff and provide feedback. For each issue found, categorize it as one of: [BUG] [SECURITY] [STYLE] [PERF] [SUGGESTION]. Format each finding as:
 
 [CATEGORY] file:line — description
 
 If no issues are found, say 'Looks good — no issues found.' Be concise. Focus on real problems, not nitpicks.`;
-
-function run(cmd, args) {
-  if (args) {
-    const res = spawnSync(cmd, args, { encoding: "utf-8", maxBuffer: MAX_BUFFER });
-    if (res.error) throw res.error;
-    if (res.status !== 0) throw new Error(res.stderr?.trim() || `${cmd} exited with code ${res.status}`);
-    return (res.stdout || "").trim();
-  }
-  return execSync(cmd, { encoding: "utf-8", maxBuffer: MAX_BUFFER }).trim();
-}
 
 export default async function review() {
   const defaultBranch = getDefaultBranch();
@@ -81,14 +70,4 @@ export default async function review() {
     (m, tag) => `\x1b[${COLORS[tag]}m${m}\x1b[0m`);
 
   console.log(colorized);
-}
-
-function getDefaultBranch() {
-  for (const cmd of [
-    "gh repo view --json defaultBranchRef -q .defaultBranchRef.name",
-    "git symbolic-ref refs/remotes/origin/HEAD",
-  ]) {
-    try { return run(cmd).replace("refs/remotes/origin/", ""); } catch {}
-  }
-  return "main";
 }

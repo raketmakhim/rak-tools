@@ -1,20 +1,6 @@
 import { execSync, spawnSync } from "child_process";
-import { createInterface } from "readline";
+import { run, prompt, getDefaultBranch } from "../util.mjs";
 import commit from "./commit.mjs";
-
-function run(cmd) {
-  return execSync(cmd, { encoding: "utf-8" }).trim();
-}
-
-function prompt(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer);
-    });
-  });
-}
 
 export default async function pr() {
   const branch = run("git branch --show-current");
@@ -25,7 +11,6 @@ export default async function pr() {
     process.exit(1);
   }
 
-  // Check for uncommitted changes
   const status = run("git status --porcelain");
   if (status) {
     console.log("Uncommitted changes detected:\n");
@@ -38,15 +23,11 @@ export default async function pr() {
     }
   }
 
-  // Check for existing PR
   let existingPrUrl = null;
   try {
     existingPrUrl = run(`gh pr view --json url -q .url`);
-  } catch {
-    // No existing PR
-  }
+  } catch {}
 
-  // Ensure branch is pushed
   try {
     run(`git rev-parse --abbrev-ref @{u}`);
   } catch {
@@ -54,7 +35,6 @@ export default async function pr() {
     execSync(`git push -u origin ${branch}`, { stdio: "inherit" });
   }
 
-  // Gather commits since divergence from default branch
   const log = run(`git log ${defaultBranch}..HEAD --pretty=format:"%h %s"`);
   const diff = run(`git diff ${defaultBranch}...HEAD --stat`);
 
@@ -80,10 +60,10 @@ export default async function pr() {
 
   const input = `Context: Branch "${branch}" → "${defaultBranch}". ${context}\n\nCommits:\n${log}\n\nDiff:\n${fullDiff}`;
 
-  const generated = execSync(
+  const generated = run(
     `claude -p "Generate a GitHub pull request title and body for the following changes. Format your response EXACTLY as:\nTITLE: <title here>\nBODY:\n<body here>\n\nKeep the title under 72 characters. The body should have a short summary, then a bullet list of what was added or changed. Use markdown. Be concise. Pay attention to the Context line — if files are new, describe them as additions, not moves or refactors."`,
-    { input, encoding: "utf-8" }
-  ).trim();
+    { input }
+  );
 
   const titleMatch = generated.match(/^title:\s*(.+)/im);
   const bodyMatch = generated.match(/body:\s*\n([\s\S]+)/im);
@@ -120,17 +100,4 @@ export default async function pr() {
     process.exit(1);
   }
   console.log(existingPrUrl ? `\nPR updated: ${existingPrUrl}` : `\n${res.stdout.trim()}`);
-}
-
-function getDefaultBranch() {
-  try {
-    return run("gh repo view --json defaultBranchRef -q .defaultBranchRef.name");
-  } catch {
-    try {
-      const ref = run("git symbolic-ref refs/remotes/origin/HEAD");
-      return ref.replace("refs/remotes/origin/", "");
-    } catch {
-      return "main";
-    }
-  }
 }

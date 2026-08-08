@@ -1,20 +1,5 @@
-import { execSync } from "child_process";
-import { createInterface } from "readline";
+import { run, prompt } from "../util.mjs";
 import { getCached, prefetch } from "../cache.mjs";
-
-function run(cmd, opts) {
-  return execSync(cmd, { encoding: "utf-8", ...opts }).trim();
-}
-
-function prompt(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer);
-    });
-  });
-}
 
 export default async function branch() {
   const status = run("git status --porcelain");
@@ -31,18 +16,15 @@ export default async function branch() {
   console.log("Changes detected:\n");
   console.log(status);
 
-  const cached = getCached(summary, "branch");
-  if (cached) {
-    console.log("\n(cached result)\n");
-  } else {
-    console.log("\nGenerating branch name...\n");
+  let name = getCached(summary, "branch");
+  console.log(name ? "\n(cached result)\n" : "\nGenerating branch name...\n");
+  if (!name) {
     prefetch(summary);
+    name = getCached(summary, "branch") || run(
+      `claude -p "Suggest a short git branch name for the following changes. Return ONLY the branch name, nothing else. Use kebab-case. Keep it under 40 characters. No prefixes like feature/ or fix/."`,
+      { input: summary }
+    );
   }
-
-  const name = getCached(summary, "branch") || run(
-    `claude -p "Suggest a short git branch name for the following changes. Return ONLY the branch name, nothing else. Use kebab-case. Keep it under 40 characters. No prefixes like feature/ or fix/."`,
-    { input: summary }
-  );
 
   const answer = await prompt(`Branch name: ${name}\nAccept? (y/n/e to edit): `);
 

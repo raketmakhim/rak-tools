@@ -33,13 +33,8 @@ export function getCached(diff, key) {
 
 export function setCached(diff, key, value) {
   const hash = hashDiff(diff);
-  const cache = readCache();
-  if (cache.hash !== hash) {
-    cache.hash = hash;
-    cache.branch = undefined;
-    cache.commit = undefined;
-    cache.review = undefined;
-  }
+  let cache = readCache();
+  if (cache.hash !== hash) cache = { hash };
   cache[key] = value;
   writeCache(cache);
 }

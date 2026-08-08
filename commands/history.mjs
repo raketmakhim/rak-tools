@@ -16,7 +16,7 @@ export default async function history() {
 
   let log;
   try {
-    log = run(`git log --pretty=format:"%h|%an|%ar|%s" -- "${file}"`);
+    log = run("git", ["log", "--pretty=format:%h|%an|%ar|%s", "--", file]);
   } catch {
     console.error("No git history found for this file.");
     process.exit(1);
@@ -54,6 +54,6 @@ export default async function history() {
   const selected = commits[idx];
   console.log(`\n${c.yellow(`Commit ${selected.hash}`)} — ${selected.subject}\n`);
 
-  const diff = run(`git show ${selected.hash} -- "${file}"`);
+  const diff = run("git", ["show", selected.hash, "--", file]);
   console.log(diff);
 }

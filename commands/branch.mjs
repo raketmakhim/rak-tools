@@ -1,5 +1,5 @@
 import { run, prompt } from "../util.mjs";
-import { getCached, prefetch } from "../cache.mjs";
+import { getCached, setCached } from "../cache.mjs";
 
 export default async function branch() {
   const status = run("git status --porcelain");
@@ -17,13 +17,15 @@ export default async function branch() {
   console.log(status);
 
   let name = getCached(summary, "branch");
-  console.log(name ? "\n(cached result)\n" : "\nGenerating branch name...\n");
-  if (!name) {
-    prefetch(summary);
-    name = getCached(summary, "branch") || run(
+  if (name) {
+    console.log("\n(cached result)\n");
+  } else {
+    console.log("\nGenerating branch name...\n");
+    name = run(
       `claude -p "Suggest a short git branch name for the following changes. Return ONLY the branch name, nothing else. Use kebab-case. Keep it under 40 characters. No prefixes like feature/ or fix/."`,
       { input: summary }
     );
+    setCached(summary, "branch", name);
   }
 
   const answer = await prompt(`Branch name: ${name}\nAccept? (y/n/e to edit): `);
@@ -35,6 +37,6 @@ export default async function branch() {
   }
   const finalName = choice === "e" ? await prompt("Enter branch name: ") : name;
 
-  run(`git checkout -b ${finalName}`);
+  run("git", ["checkout", "-b", finalName]);
   console.log(`\nSwitched to new branch: ${finalName}`);
 }

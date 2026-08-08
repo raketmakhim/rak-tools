@@ -19,7 +19,7 @@ export default async function commit() {
   const status = run("git status --porcelain");
   if (!status) {
     console.log("No changes detected. Nothing to commit.");
-    process.exit(0);
+    return false;
   }
 
   const staged = run("git diff --cached --name-only");
@@ -55,7 +55,7 @@ export default async function commit() {
     finalMessage = await prompt("Enter your commit message: ");
   } else if (answer.toLowerCase() !== "y") {
     console.log("Commit cancelled. Changes remain staged.");
-    process.exit(0);
+    return false;
   }
 
   execSync("git commit -m " + JSON.stringify(finalMessage), {
@@ -71,4 +71,6 @@ export default async function commit() {
     execSync(`git push -u origin ${branch}`, { stdio: "inherit" });
     console.log("Done!");
   }
+
+  return true;
 }

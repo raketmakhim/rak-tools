@@ -1,4 +1,4 @@
-import { execSync, execFileSync } from "child_process";
+import { execSync } from "child_process";
 
 const MAX_BUFFER = 10 * 1024 * 1024;
 
@@ -28,7 +28,7 @@ export default async function review() {
     context = "uncommitted changes on " + defaultBranch;
   } else {
     diff = run(`git diff ${defaultBranch}...HEAD`);
-    const uncommitted = run("git diff");
+    const uncommitted = run("git diff HEAD");
     if (uncommitted) {
       diff += "\n" + uncommitted;
     }
@@ -56,13 +56,11 @@ export default async function review() {
 
   let output;
   try {
-    output = execFileSync("claude", ["-p", REVIEW_PROMPT], {
-      input,
-      encoding: "utf-8",
-      maxBuffer: MAX_BUFFER,
-      shell: true,
-    }).trim();
-  } catch (err) {
+    output = execSync(
+      `claude -p ${JSON.stringify(REVIEW_PROMPT)}`,
+      { input, encoding: "utf-8", maxBuffer: MAX_BUFFER }
+    ).trim();
+  } catch {
     console.error("Failed to run claude CLI. Is it installed? (npm i -g @anthropic-ai/claude-code)");
     process.exit(1);
   }

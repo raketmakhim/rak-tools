@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 
 const MAX_BUFFER = 10 * 1024 * 1024;
 
@@ -8,7 +8,10 @@ const REVIEW_PROMPT = `You are a senior code reviewer. Review the following diff
 
 If no issues are found, say 'Looks good — no issues found.' Be concise. Focus on real problems, not nitpicks.`;
 
-function run(cmd) {
+function run(cmd, args) {
+  if (args) {
+    return spawnSync(cmd, args, { encoding: "utf-8", maxBuffer: MAX_BUFFER }).stdout.trim();
+  }
   return execSync(cmd, { encoding: "utf-8", maxBuffer: MAX_BUFFER }).trim();
 }
 
@@ -27,7 +30,7 @@ export default async function review() {
     }
     context = "uncommitted changes on " + defaultBranch;
   } else {
-    diff = run(`git diff ${defaultBranch}...HEAD`);
+    diff = run("git", ["diff", `${defaultBranch}...HEAD`]);
     const uncommitted = run("git diff HEAD");
     if (uncommitted) {
       diff += "\n" + uncommitted;
@@ -40,7 +43,7 @@ export default async function review() {
   }
 
   const log = branch !== defaultBranch
-    ? run(`git log ${defaultBranch}..HEAD --pretty=format:"%h %s"`)
+    ? run("git", ["log", `${defaultBranch}..HEAD`, "--pretty=format:%h %s"])
     : "";
 
   const input = log
@@ -60,8 +63,9 @@ export default async function review() {
       `claude -p ${JSON.stringify(REVIEW_PROMPT)}`,
       { input, encoding: "utf-8", maxBuffer: MAX_BUFFER }
     ).trim();
-  } catch {
-    console.error("Failed to run claude CLI. Is it installed? (npm i -g @anthropic-ai/claude-code)");
+  } catch (err) {
+    const stderr = err.stderr?.toString().trim();
+    console.error(stderr || `Failed to run claude CLI: ${err.message}`);
     process.exit(1);
   }
 

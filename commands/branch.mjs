@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import { createInterface } from "readline";
+import { getCached, prefetch } from "../cache.mjs";
 
 function run(cmd, opts) {
   return execSync(cmd, { encoding: "utf-8", ...opts }).trim();
@@ -29,9 +30,16 @@ export default async function branch() {
 
   console.log("Changes detected:\n");
   console.log(status);
-  console.log("\nGenerating branch name...\n");
 
-  const name = run(
+  const cached = getCached(summary, "branch");
+  if (cached) {
+    console.log("\n(cached result)\n");
+  } else {
+    console.log("\nGenerating branch name...\n");
+    prefetch(summary);
+  }
+
+  const name = getCached(summary, "branch") || run(
     `claude -p "Suggest a short git branch name for the following changes. Return ONLY the branch name, nothing else. Use kebab-case. Keep it under 40 characters. No prefixes like feature/ or fix/."`,
     { input: summary }
   );

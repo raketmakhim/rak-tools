@@ -2,6 +2,7 @@ import { execSync, spawnSync } from "child_process";
 import { writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
+import { getCached, setCached } from "../cache.mjs";
 
 const MAX_BUFFER = 10 * 1024 * 1024;
 
@@ -50,24 +51,30 @@ export default async function review() {
     ? `Context: ${context}\n\nCommits:\n${log}\n\nDiff:\n${diff}`
     : `Context: ${context}\n\nDiff:\n${diff}`;
 
-  console.log(`Reviewing ${context}...\n`);
-
   const COLORS = { BUG: 31, SECURITY: 31, PERF: 33, STYLE: 90, SUGGESTION: 32 };
 
-  const inputFile = join(tmpdir(), `rak-review-${process.pid}.txt`);
+  const cached = getCached(diff, "review");
   let output;
-  try {
-    writeFileSync(inputFile, REVIEW_PROMPT + "\n\n" + input);
-    output = execSync(
-      `claude -p "Follow the instructions and review the code changes provided via stdin." < ${JSON.stringify(inputFile)}`,
-      { encoding: "utf-8", maxBuffer: MAX_BUFFER }
-    ).trim();
-  } catch (err) {
-    const stderr = err.stderr?.toString().trim();
-    console.error(`Failed to run review: ${stderr || err.message}`);
-    process.exit(1);
-  } finally {
-    try { unlinkSync(inputFile); } catch {}
+  if (cached) {
+    console.log(`Reviewing ${context}... (cached)\n`);
+    output = cached;
+  } else {
+    console.log(`Reviewing ${context}...\n`);
+    const inputFile = join(tmpdir(), `rak-review-${process.pid}.txt`);
+    try {
+      writeFileSync(inputFile, REVIEW_PROMPT + "\n\n" + input);
+      output = execSync(
+        `claude -p "Follow the instructions and review the code changes provided via stdin." < ${JSON.stringify(inputFile)}`,
+        { encoding: "utf-8", maxBuffer: MAX_BUFFER }
+      ).trim();
+      setCached(diff, "review", output);
+    } catch (err) {
+      const stderr = err.stderr?.toString().trim();
+      console.error(`Failed to run review: ${stderr || err.message}`);
+      process.exit(1);
+    } finally {
+      try { unlinkSync(inputFile); } catch {}
+    }
   }
 
   const colorized = output.replace(/\[(BUG|SECURITY|PERF|STYLE|SUGGESTION)\]/g,

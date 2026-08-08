@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import { createInterface } from "readline";
+import { getCached, setCached } from "../cache.mjs";
 
 function run(cmd) {
   return execSync(cmd, { encoding: "utf-8" }).trim();
@@ -32,12 +33,19 @@ export default async function commit() {
 
   const diff = run("git diff --cached");
 
-  console.log("\nGenerating commit message...\n");
-
-  const message = execSync(
-    `claude -p "Generate a concise git commit message for the following diff. Return ONLY the commit message, nothing else. Use conventional commit format (e.g. feat:, fix:, chore:). Keep the subject line under 72 characters. Add a blank line and a short body if needed."`,
-    { input: diff, encoding: "utf-8" }
-  ).trim();
+  const cached = getCached(diff, "commit");
+  let message;
+  if (cached) {
+    console.log("\n(using cached commit message)\n");
+    message = cached;
+  } else {
+    console.log("\nGenerating commit message...\n");
+    message = execSync(
+      `claude -p "Generate a concise git commit message for the following diff. Return ONLY the commit message, nothing else. Use conventional commit format (e.g. feat:, fix:, chore:). Keep the subject line under 72 characters. Add a blank line and a short body if needed."`,
+      { input: diff, encoding: "utf-8" }
+    ).trim();
+    setCached(diff, "commit", message);
+  }
 
   console.log("--- Proposed commit message ---");
   console.log(message);

@@ -74,7 +74,11 @@ export default async function pr() {
   const bodyMatch = generated.match(/BODY:\n([\s\S]+)/m);
 
   const title = titleMatch?.[1]?.trim() || branch;
-  const body = bodyMatch?.[1]?.trim() || generated;
+  const rawBody = bodyMatch?.[1]?.trim() || generated;
+  const body = rawBody
+    .replace(/^Title:.*\n*/im, "")
+    .replace(/^Body:\s*\n*/im, "")
+    .trim();
 
   const action = existingPrUrl ? "Update" : "Create";
   console.log(`--- Proposed PR (${action.toLowerCase()}) ---`);

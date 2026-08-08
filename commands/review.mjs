@@ -60,6 +60,7 @@ export default async function review() {
       input,
       encoding: "utf-8",
       maxBuffer: MAX_BUFFER,
+      shell: true,
     }).trim();
   } catch (err) {
     console.error("Failed to run claude CLI. Is it installed? (npm i -g @anthropic-ai/claude-code)");

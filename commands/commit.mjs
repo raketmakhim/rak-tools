@@ -24,15 +24,11 @@ export default async function commit() {
 
   const staged = run("git diff --cached --name-only");
 
-  if (staged) {
-    console.log("Staged changes found:\n");
-    console.log(staged);
-  } else {
+  if (!staged) {
     console.log("No staged changes found. Staging all changes...\n");
     run("git add -A");
-    const allStaged = run("git diff --cached --name-only");
-    console.log(allStaged);
   }
+  console.log(run("git diff --cached --name-only"));
 
   const diff = run("git diff --cached");
 
@@ -63,14 +59,8 @@ export default async function commit() {
   });
 
   console.log("\nPushing to remote...");
-  try {
-    execSync("git push", { stdio: "inherit" });
-    console.log("Done!");
-  } catch {
-    const branch = run("git branch --show-current");
-    execSync(`git push -u origin ${branch}`, { stdio: "inherit" });
-    console.log("Done!");
-  }
+  execSync("git push -u origin HEAD", { stdio: "inherit" });
+  console.log("Done!");
 
   return true;
 }

@@ -71,8 +71,9 @@ export default async function pr() {
 
   const fullDiff = run(`git diff ${defaultBranch}...HEAD`);
   const baseDiffStat = run(`git diff ${defaultBranch}...HEAD --stat --numstat`);
-  const newFiles = baseDiffStat.split("\n").filter((l) => l.match(/^(\d+)\t0\t/)).length;
-  const totalFiles = baseDiffStat.split("\n").filter((l) => l.match(/^\d+\t/)).length;
+  const lines = baseDiffStat.split("\n").filter((l) => /^\d+\t/.test(l));
+  const newFiles = lines.filter((l) => /\t0\t/.test(l)).length;
+  const totalFiles = lines.length;
   const context = newFiles === totalFiles
     ? "All files in this diff are newly created — this is not a refactor or move."
     : `${newFiles} of ${totalFiles} files are new additions.`;
@@ -88,10 +89,8 @@ export default async function pr() {
   const bodyMatch = generated.match(/body:\s*\n([\s\S]+)/im);
 
   const title = titleMatch?.[1]?.trim() || branch;
-  const rawBody = bodyMatch?.[1]?.trim() || generated;
-  const body = rawBody
+  const body = (bodyMatch?.[1] || generated)
     .replace(/^Title:.*\n*/im, "")
-    .replace(/^Body:\s*\n*/im, "")
     .trim();
 
   const action = existingPrUrl ? "Update" : "Create";
@@ -104,41 +103,23 @@ export default async function pr() {
 
   let finalTitle = title;
 
-  if (answer.toLowerCase() === "e") {
+  const choice = answer.toLowerCase();
+  if (choice === "e") {
     finalTitle = await prompt("Enter PR title: ");
-  } else if (answer.toLowerCase() !== "y") {
+  } else if (choice !== "y") {
     console.log("PR cancelled.");
     process.exit(0);
   }
 
-  if (existingPrUrl) {
-    const res = spawnSync("gh", [
-      "pr", "edit",
-      "--title", finalTitle,
-      "--body", body,
-    ], { encoding: "utf-8" });
-
-    if (res.status !== 0) {
-      console.error(res.stderr?.trim() || "Failed to update PR.");
-      process.exit(1);
-    }
-
-    console.log(`\nPR updated: ${existingPrUrl}`);
-  } else {
-    const res = spawnSync("gh", [
-      "pr", "create",
-      "--title", finalTitle,
-      "--body", body,
-      "--base", defaultBranch,
-    ], { encoding: "utf-8" });
-
-    if (res.status !== 0) {
-      console.error(res.stderr?.trim() || "Failed to create PR.");
-      process.exit(1);
-    }
-
-    console.log(`\n${res.stdout.trim()}`);
+  const args = existingPrUrl
+    ? ["pr", "edit", "--title", finalTitle, "--body", body]
+    : ["pr", "create", "--title", finalTitle, "--body", body, "--base", defaultBranch];
+  const res = spawnSync("gh", args, { encoding: "utf-8" });
+  if (res.status !== 0) {
+    console.error(res.stderr?.trim() || `Failed to ${action.toLowerCase()} PR.`);
+    process.exit(1);
   }
+  console.log(existingPrUrl ? `\nPR updated: ${existingPrUrl}` : `\n${res.stdout.trim()}`);
 }
 
 function getDefaultBranch() {

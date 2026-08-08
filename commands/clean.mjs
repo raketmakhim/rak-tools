@@ -60,16 +60,10 @@ export default async function clean() {
   }
 
   const red = (s) => `\x1b[31m${s}\x1b[0m`;
-  const grey = (s) => `\x1b[90m${s}\x1b[0m`;
 
   for (const b of toDelete) {
-    try {
-      run(`git branch -d ${b}`);
-      console.log(red(`  ${b} [deleted]`));
-    } catch {
-      run(`git branch -D ${b}`);
-      console.log(red(`  ${b} [deleted]`));
-    }
+    try { run(`git branch -d ${b}`); } catch { run(`git branch -D ${b}`); }
+    console.log(red(`  ${b} [deleted]`));
   }
 
   console.log("\nDone!");

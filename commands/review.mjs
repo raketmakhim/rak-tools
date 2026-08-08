@@ -30,22 +30,16 @@ export default async function review() {
 
   if (branch === defaultBranch) {
     diff = run("git diff HEAD");
-    if (!diff) {
-      console.log("No changes to review.");
-      process.exit(0);
-    }
     context = "uncommitted changes on " + defaultBranch;
   } else {
     diff = run("git", ["diff", `${defaultBranch}...HEAD`]);
     const uncommitted = run("git diff HEAD");
-    if (uncommitted) {
-      diff += "\n\n--- Uncommitted changes ---\n\n" + uncommitted;
-    }
-    if (!diff) {
-      console.log("No changes to review.");
-      process.exit(0);
-    }
+    if (uncommitted) diff += "\n\n--- Uncommitted changes ---\n\n" + uncommitted;
     context = `branch "${branch}" vs "${defaultBranch}"`;
+  }
+  if (!diff) {
+    console.log("No changes to review.");
+    process.exit(0);
   }
 
   const log = branch !== defaultBranch
@@ -58,10 +52,7 @@ export default async function review() {
 
   console.log(`Reviewing ${context}...\n`);
 
-  const yellow = (s) => `\x1b[33m${s}\x1b[0m`;
-  const red = (s) => `\x1b[31m${s}\x1b[0m`;
-  const green = (s) => `\x1b[32m${s}\x1b[0m`;
-  const grey = (s) => `\x1b[90m${s}\x1b[0m`;
+  const COLORS = { BUG: 31, SECURITY: 31, PERF: 33, STYLE: 90, SUGGESTION: 32 };
 
   const inputFile = join(tmpdir(), `rak-review-${process.pid}.txt`);
   let output;
@@ -79,25 +70,18 @@ export default async function review() {
     try { unlinkSync(inputFile); } catch {}
   }
 
-  const colorized = output
-    .replace(/\[BUG\]/g, red("[BUG]"))
-    .replace(/\[SECURITY\]/g, red("[SECURITY]"))
-    .replace(/\[PERF\]/g, yellow("[PERF]"))
-    .replace(/\[STYLE\]/g, grey("[STYLE]"))
-    .replace(/\[SUGGESTION\]/g, green("[SUGGESTION]"));
+  const colorized = output.replace(/\[(BUG|SECURITY|PERF|STYLE|SUGGESTION)\]/g,
+    (m, tag) => `\x1b[${COLORS[tag]}m${m}\x1b[0m`);
 
   console.log(colorized);
 }
 
 function getDefaultBranch() {
-  try {
-    return run("gh repo view --json defaultBranchRef -q .defaultBranchRef.name");
-  } catch {
-    try {
-      const ref = run("git symbolic-ref refs/remotes/origin/HEAD");
-      return ref.replace("refs/remotes/origin/", "");
-    } catch {
-      return "main";
-    }
+  for (const cmd of [
+    "gh repo view --json defaultBranchRef -q .defaultBranchRef.name",
+    "git symbolic-ref refs/remotes/origin/HEAD",
+  ]) {
+    try { return run(cmd).replace("refs/remotes/origin/", ""); } catch {}
   }
+  return "main";
 }

@@ -25,14 +25,11 @@ export default async function pr() {
   }
 
   // Check for existing PR
+  let existingPrUrl = null;
   try {
-    const existing = run(`gh pr view --json url -q .url`);
-    if (existing) {
-      console.log(`PR already exists: ${existing}`);
-      process.exit(0);
-    }
+    existingPrUrl = run(`gh pr view --json url -q .url`);
   } catch {
-    // No existing PR — continue
+    // No existing PR
   }
 
   // Ensure branch is pushed
@@ -79,12 +76,13 @@ export default async function pr() {
   const title = titleMatch?.[1]?.trim() || branch;
   const body = bodyMatch?.[1]?.trim() || generated;
 
-  console.log("--- Proposed PR ---");
+  const action = existingPrUrl ? "Update" : "Create";
+  console.log(`--- Proposed PR (${action.toLowerCase()}) ---`);
   console.log(`Title: ${title}\n`);
   console.log(body);
   console.log("-------------------\n");
 
-  const answer = await prompt("Create this PR? (y/n/e to edit title): ");
+  const answer = await prompt(`${action} this PR? (y/n/e to edit title): `);
 
   let finalTitle = title;
 
@@ -95,21 +93,34 @@ export default async function pr() {
     process.exit(0);
   }
 
-  const res = spawnSync("gh", [
-    "pr", "create",
-    "--title", finalTitle,
-    "--body", body,
-    "--base", defaultBranch,
-  ], { encoding: "utf-8" });
+  if (existingPrUrl) {
+    const res = spawnSync("gh", [
+      "pr", "edit",
+      "--title", finalTitle,
+      "--body", body,
+    ], { encoding: "utf-8" });
 
-  if (res.status !== 0) {
-    console.error(res.stderr?.trim() || "Failed to create PR.");
-    process.exit(1);
+    if (res.status !== 0) {
+      console.error(res.stderr?.trim() || "Failed to update PR.");
+      process.exit(1);
+    }
+
+    console.log(`\nPR updated: ${existingPrUrl}`);
+  } else {
+    const res = spawnSync("gh", [
+      "pr", "create",
+      "--title", finalTitle,
+      "--body", body,
+      "--base", defaultBranch,
+    ], { encoding: "utf-8" });
+
+    if (res.status !== 0) {
+      console.error(res.stderr?.trim() || "Failed to create PR.");
+      process.exit(1);
+    }
+
+    console.log(`\n${res.stdout.trim()}`);
   }
-
-  const result = res.stdout.trim();
-
-  console.log(`\n${result}`);
 }
 
 function getDefaultBranch() {

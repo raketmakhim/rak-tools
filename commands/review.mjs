@@ -39,7 +39,7 @@ export default async function review() {
     diff = run("git", ["diff", `${defaultBranch}...HEAD`]);
     const uncommitted = run("git diff HEAD");
     if (uncommitted) {
-      diff += "\n" + uncommitted;
+      diff += "\n\n--- Uncommitted changes ---\n\n" + uncommitted;
     }
     if (!diff) {
       console.log("No changes to review.");

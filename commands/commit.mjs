@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { execSync } from "child_process";
 import { createInterface } from "readline";
 
@@ -17,15 +15,13 @@ function prompt(question) {
   });
 }
 
-async function main() {
-  // Check if there are any changes at all
+export default async function commit() {
   const status = run("git status --porcelain");
   if (!status) {
     console.log("No changes detected. Nothing to commit.");
     process.exit(0);
   }
 
-  // Check for staged changes
   const staged = run("git diff --cached --name-only");
 
   if (staged) {
@@ -38,12 +34,10 @@ async function main() {
     console.log(allStaged);
   }
 
-  // Get the diff for commit message generation
   const diff = run("git diff --cached");
 
   console.log("\nGenerating commit message...\n");
 
-  // Use claude CLI to generate a commit message from the diff
   const message = execSync(
     `claude -p "Generate a concise git commit message for the following diff. Return ONLY the commit message, nothing else. Use conventional commit format (e.g. feat:, fix:, chore:). Keep the subject line under 72 characters. Add a blank line and a short body if needed."`,
     { input: diff, encoding: "utf-8" }
@@ -64,25 +58,17 @@ async function main() {
     process.exit(0);
   }
 
-  // Commit
   execSync("git commit -m " + JSON.stringify(finalMessage), {
     stdio: "inherit",
   });
 
-  // Push
   console.log("\nPushing to remote...");
   try {
     execSync("git push", { stdio: "inherit" });
     console.log("Done!");
   } catch {
-    // If no upstream, set it
     const branch = run("git branch --show-current");
     execSync(`git push -u origin ${branch}`, { stdio: "inherit" });
     console.log("Done!");
   }
 }
-
-main().catch((err) => {
-  console.error("Error:", err.message);
-  process.exit(1);
-});

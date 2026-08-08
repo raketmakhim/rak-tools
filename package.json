@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "bin": {
+    "rak": "./cli.mjs"
+  },
   "scripts": {
-    "commit": "node commit.mjs"
+    "commit": "node cli.mjs commit"
   },
   "repository": {
     "type": "git",

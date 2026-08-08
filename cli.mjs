@@ -16,6 +16,7 @@ if (!command) {
   console.log("  pr        Create a GitHub PR with AI-generated title/body");
   console.log("  branch    Create and switch to an AI-named branch from current changes");
   console.log("  clean     Delete all merged branches");
+  console.log("  review    AI code review of current changes");
   console.log("\nRun 'rak <command> --help' for more info on a command.");
   process.exit(0);
 }

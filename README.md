@@ -71,6 +71,17 @@ AI-powered code slimming &mdash; finds ways to shorten and simplify code.
 
 Outputs `[CUT]` findings ranked by impact, each with before/after snippets. Focuses only on making code leaner &mdash; no style or naming suggestions.
 
+### `rak rebase`
+
+Rebases current branch onto the default branch with AI-powered conflict resolution.
+
+1. Fetches latest default branch from origin.
+2. Runs `git rebase origin/<default>`.
+3. If conflicts occur, lists conflicted files and offers to resolve with Claude.
+4. For each file: shows the AI-proposed resolution, prompts to accept or skip.
+5. Once all conflicts are resolved, continues the rebase automatically.
+6. On the default branch: just pulls latest.
+
 ## Adding commands
 
 Drop a file in `commands/`. Filename becomes the subcommand.
@@ -100,6 +111,7 @@ commands/
   commit.mjs         rak commit
   history.mjs        rak history
   pr.mjs             rak pr
+  rebase.mjs         rak rebase
   review.mjs         rak review
   slim.mjs           rak slim
 package.json

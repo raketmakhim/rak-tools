@@ -19,6 +19,7 @@ Commands:
   review    AI code review of current changes
   history   Show git history for a file
   slim      Find ways to simplify and shorten code
+  rebase    Rebase onto default branch with AI conflict resolution
 
 Run 'rak <command> --help' for more info on a command.`);
   process.exit(0);

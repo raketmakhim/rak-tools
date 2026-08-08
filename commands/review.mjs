@@ -1,4 +1,7 @@
 import { execSync, spawnSync } from "child_process";
+import { writeFileSync, unlinkSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 
 const MAX_BUFFER = 10 * 1024 * 1024;
 
@@ -10,7 +13,10 @@ If no issues are found, say 'Looks good — no issues found.' Be concise. Focus 
 
 function run(cmd, args) {
   if (args) {
-    return spawnSync(cmd, args, { encoding: "utf-8", maxBuffer: MAX_BUFFER }).stdout.trim();
+    const res = spawnSync(cmd, args, { encoding: "utf-8", maxBuffer: MAX_BUFFER });
+    if (res.error) throw res.error;
+    if (res.status !== 0) throw new Error(res.stderr?.trim() || `${cmd} exited with code ${res.status}`);
+    return (res.stdout || "").trim();
   }
   return execSync(cmd, { encoding: "utf-8", maxBuffer: MAX_BUFFER }).trim();
 }
@@ -57,16 +63,20 @@ export default async function review() {
   const green = (s) => `\x1b[32m${s}\x1b[0m`;
   const grey = (s) => `\x1b[90m${s}\x1b[0m`;
 
+  const inputFile = join(tmpdir(), `rak-review-${process.pid}.txt`);
   let output;
   try {
+    writeFileSync(inputFile, REVIEW_PROMPT + "\n\n" + input);
     output = execSync(
-      `claude -p ${JSON.stringify(REVIEW_PROMPT)}`,
-      { input, encoding: "utf-8", maxBuffer: MAX_BUFFER }
+      `claude -p "Follow the instructions and review the code changes provided via stdin." < ${JSON.stringify(inputFile)}`,
+      { encoding: "utf-8", maxBuffer: MAX_BUFFER }
     ).trim();
   } catch (err) {
     const stderr = err.stderr?.toString().trim();
-    console.error(stderr || `Failed to run claude CLI: ${err.message}`);
+    console.error(`Failed to run review: ${stderr || err.message}`);
     process.exit(1);
+  } finally {
+    try { unlinkSync(inputFile); } catch {}
   }
 
   const colorized = output

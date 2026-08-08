@@ -22,22 +22,19 @@ export default async function clean() {
 
   const defaultBranch = getDefaultBranch();
 
-  // Branches merged via git merge
-  const gitMerged = run(`git branch --merged ${defaultBranch}`)
+  const allLocal = run("git branch")
     .split("\n")
     .map((b) => b.trim().replace(/^\*\s*/, ""))
     .filter((b) => b && b !== current && b !== defaultBranch);
 
-  // Branches whose remote was gone AND whose PR was merged on GitHub
-  const goneBranches = run("git branch -vv")
-    .split("\n")
-    .map((line) => {
-      const match = line.trim().replace(/^\*\s*/, "").match(/^(\S+)\s+\S+\s+\[.+?: gone\]/);
-      return match?.[1];
-    })
-    .filter((b) => b && b !== current && b !== defaultBranch);
+  if (!allLocal.length) {
+    console.log("No branches to check.");
+    process.exit(0);
+  }
 
-  const goneMerged = goneBranches.filter((b) => {
+  console.log("Checking branches against GitHub...\n");
+
+  const toDelete = allLocal.filter((b) => {
     try {
       const state = run(`gh pr view ${b} --json state -q .state`);
       return state === "MERGED";
@@ -46,14 +43,12 @@ export default async function clean() {
     }
   });
 
-  const toDelete = [...new Set([...gitMerged, ...goneMerged])];
-
   if (!toDelete.length) {
     console.log("No merged branches to delete.");
     process.exit(0);
   }
 
-  console.log("Branches to delete:\n");
+  console.log("Merged branches (confirmed via GitHub):\n");
   toDelete.forEach((b) => console.log(`  ${b}`));
   console.log(`\nCurrent branch (${current}) and ${defaultBranch} are kept.\n`);
 
@@ -72,7 +67,8 @@ export default async function clean() {
       run(`git branch -d ${b}`);
       console.log(red(`  ${b} [deleted]`));
     } catch {
-      console.log(grey(`  ${b} [skipped — not fully merged]`));
+      run(`git branch -D ${b}`);
+      console.log(red(`  ${b} [deleted]`));
     }
   }
 

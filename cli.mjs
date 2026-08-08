@@ -29,5 +29,10 @@ if (!existsSync(commandFile)) {
   process.exit(1);
 }
 
-const mod = await import(pathToFileURL(commandFile).href);
-await mod.default();
+try {
+  const mod = await import(pathToFileURL(commandFile).href);
+  await mod.default();
+} catch (err) {
+  console.error(`Error: ${err.message}`);
+  process.exit(1);
+}

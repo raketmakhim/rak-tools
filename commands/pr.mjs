@@ -1,5 +1,6 @@
 import { execSync, spawnSync } from "child_process";
 import { ai, getPrompt, run, prompt, getDefaultBranch } from "../util.mjs";
+import config from "../rak.config.mjs";
 import commit from "./commit.mjs";
 
 export default async function pr() {
@@ -49,7 +50,9 @@ export default async function pr() {
 
   console.log("Generating PR title and description...\n");
 
-  const fullDiff = run(`git diff ${defaultBranch}...HEAD`);
+  const backend = process.env.RAK_AI || config.ai || "claude";
+  const isLocal = backend === "local";
+
   const baseDiffStat = run(`git diff ${defaultBranch}...HEAD --stat --numstat`);
   const lines = baseDiffStat.split("\n").filter((l) => /^\d+\t/.test(l));
   const newFiles = lines.filter((l) => /\t0\t/.test(l)).length;
@@ -58,7 +61,11 @@ export default async function pr() {
     ? "All files in this diff are newly created — this is not a refactor or move."
     : `${newFiles} of ${totalFiles} files are new additions.`;
 
-  const input = `Context: Branch "${branch}" → "${defaultBranch}". ${context}\n\nCommits:\n${log}\n\nDiff:\n${fullDiff}`;
+  const diffContent = isLocal
+    ? run(`git diff ${defaultBranch}...HEAD --stat`)
+    : run(`git diff ${defaultBranch}...HEAD`);
+
+  const input = `Context: Branch "${branch}" → "${defaultBranch}". ${context}\n\nCommits:\n${log}\n\nChanges:\n${diffContent}`;
 
   const generated = ai(getPrompt("pr"), input);
 

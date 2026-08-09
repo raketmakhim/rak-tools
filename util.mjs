@@ -1,6 +1,10 @@
 import { execSync, spawnSync } from "child_process";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { createInterface } from "readline";
 import config from "./rak.config.mjs";
+
+const PROMPTS_DIR = join(import.meta.dirname, "prompts");
 
 export const MAX_BUFFER = 10 * 1024 * 1024;
 
@@ -61,6 +65,12 @@ export const c = {
   cyan: (s) => `\x1b[36m${s}\x1b[0m`,
   grey: (s) => `\x1b[90m${s}\x1b[0m`,
 };
+
+export function getPrompt(command) {
+  const backend = process.env.RAK_AI || config.ai || "claude";
+  const variant = backend === "local" ? "local" : "claude";
+  return readFileSync(join(PROMPTS_DIR, `${command}-${variant}.txt`), "utf-8").trim();
+}
 
 export function getDefaultBranch() {
   for (const cmd of [

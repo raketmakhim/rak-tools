@@ -1,0 +1,15 @@
+Generate a git commit message for the following diff.
+
+Rules:
+- Return ONLY the raw commit message text. No markdown, no code fences, no backticks, no extra explanation.
+- Use conventional commit format: feat:, fix:, chore:, refactor:, docs:, etc.
+- Keep the subject line under 72 characters.
+- Add a blank line and a short body with bullet points if multiple things changed.
+- Use REAL line breaks between the subject and body. Do NOT output literal \n characters.
+
+Example output:
+feat: add user authentication flow
+
+- Add login and signup endpoints
+- Add JWT token validation middleware
+- Add password hashing with bcrypt

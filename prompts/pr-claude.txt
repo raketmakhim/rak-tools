@@ -1,0 +1,6 @@
+Generate a GitHub pull request title and body for the following changes. Format your response EXACTLY as:
+TITLE: <title here>
+BODY:
+<body here>
+
+Keep the title under 72 characters. The body should have a short summary, then a bullet list of what was added or changed. Use markdown. Be concise. Pay attention to the Context line — if files are new, describe them as additions, not moves or refactors.

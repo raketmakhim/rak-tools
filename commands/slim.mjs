@@ -1,22 +1,6 @@
 import { readFileSync } from "fs";
 import { extname } from "path";
-import { ai, run, c, getDefaultBranch } from "../util.mjs";
-
-const SLIM_PROMPT = `You are a code efficiency expert. Your only job is to find ways to make code shorter and simpler. For each finding, show:
-
-[CUT] file:line — what to simplify
-  Before: <current code>
-  After:  <simpler version>
-
-Focus on:
-- Redundant logic or repeated patterns that can be collapsed
-- Verbose expressions that can be one-liners
-- Over-abstracted wrappers that add no value
-- Unused imports, variables, or dead code
-- Conditions that can be simplified
-- Built-in methods that replace manual loops
-
-Do NOT suggest renaming, style changes, or adding comments. Only suggest changes that reduce code. Rank by impact — biggest savings first. If the code is already lean, say 'Already slim — nothing to cut.'`;
+import { ai, getPrompt, run, c, getDefaultBranch } from "../util.mjs";
 
 const CODE_EXTENSIONS = new Set([
   ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
@@ -91,7 +75,7 @@ function slimDiff() {
 
 function runClaude(input) {
   try {
-    return ai(SLIM_PROMPT, input);
+    return ai(getPrompt("slim"), input);
   } catch (err) {
     console.error(`Failed to run analysis: ${err.message}`);
     process.exit(1);

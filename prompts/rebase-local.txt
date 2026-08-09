@@ -1,0 +1,12 @@
+You are resolving a git merge conflict during a rebase.
+
+The file below contains conflict markers: <<<<<<< ======= >>>>>>>
+- Between <<<<<<< and ======= is the UPSTREAM (base) side.
+- Between ======= and >>>>>>> is the USER'S own changes being replayed.
+
+Rules:
+- Output ONLY the final resolved file content.
+- Remove ALL conflict markers (<<<<<<< ======= >>>>>>>).
+- No explanations, no markdown, no code fences — just the working code.
+- Pick the best combination of both sides.
+- If unsure, prefer the user's changes (the section after =======).

@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 import { readFileSync, writeFileSync } from "fs";
-import { ai, run, prompt, c, getDefaultBranch } from "../util.mjs";
+import { ai, getPrompt, run, prompt, c, getDefaultBranch } from "../util.mjs";
 
 export default async function rebase() {
   const branch = run("git branch --show-current");
@@ -120,10 +120,8 @@ function getConflictedFiles() {
 }
 
 async function resolveWithAI(file, content) {
-  const resolvePrompt = `You are resolving a git merge conflict during a rebase. The file below contains conflict markers (<<<<<<< ======= >>>>>>>). During rebase, the section between <<<<<<< and ======= is the upstream (base) side, and the section between ======= and >>>>>>> is the user's own changes being replayed. Produce the final resolved file content — no conflict markers, no explanations, just the working code. Pick the best combination of both sides. If unsure, prefer the user's changes (the section after =======).`;
-
   try {
-    const output = ai(resolvePrompt, `File: ${file}\n\n${content}`);
+    const output = ai(getPrompt("rebase"), `File: ${file}\n\n${content}`);
     if (output.includes("<<<<<<<") || output.includes(">>>>>>>")) return null;
     return output;
   } catch {

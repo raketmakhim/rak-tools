@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { ai, run, prompt } from "../util.mjs";
+import { ai, getPrompt, run, prompt } from "../util.mjs";
 import { getCached, setCached } from "../cache.mjs";
 
 export default async function commit() {
@@ -26,10 +26,7 @@ export default async function commit() {
     message = cached;
   } else {
     console.log("\nGenerating commit message...\n");
-    message = ai(
-      "Generate a concise git commit message for the following diff. Return ONLY the commit message, nothing else. Use conventional commit format (e.g. feat:, fix:, chore:). Keep the subject line under 72 characters. Add a blank line and a short body if needed.",
-      diff
-    );
+    message = ai(getPrompt("commit"), diff).replace(/\\n/g, "\n");
     setCached(diff, "commit", message);
   }
 

@@ -1,6 +1,5 @@
 import { execSync, spawnSync } from "child_process";
-import { ai, getPrompt, run, prompt, getDefaultBranch } from "../util.mjs";
-import config from "../rak.config.mjs";
+import { ai, getBackend, getPrompt, run, prompt, getDefaultBranch } from "../util.mjs";
 import commit from "./commit.mjs";
 
 export default async function pr() {
@@ -50,8 +49,7 @@ export default async function pr() {
 
   console.log("Generating PR title and description...\n");
 
-  const backend = process.env.RAK_AI || config.ai || "claude";
-  const isLocal = backend === "local";
+  const isLocal = getBackend("pr") === "local";
 
   const baseDiffStat = run(`git diff ${defaultBranch}...HEAD --stat --numstat`);
   const lines = baseDiffStat.split("\n").filter((l) => /^\d+\t/.test(l));
@@ -67,7 +65,7 @@ export default async function pr() {
 
   const input = `Context: Branch "${branch}" → "${defaultBranch}". ${context}\n\nCommits:\n${log}\n\nChanges:\n${diffContent}`;
 
-  const generated = ai(getPrompt("pr"), input);
+  const generated = ai(getPrompt("pr"), input, "pr");
 
   const titleMatch = generated.match(/^title:\s*(.+)/im);
   const bodyMatch = generated.match(/body:\s*\n([\s\S]+)/im);

@@ -121,7 +121,7 @@ function getConflictedFiles() {
 
 async function resolveWithAI(file, content) {
   try {
-    const output = ai(getPrompt("rebase"), `File: ${file}\n\n${content}`);
+    const output = ai(getPrompt("rebase"), `File: ${file}\n\n${content}`, "rebase");
     if (output.includes("<<<<<<<") || output.includes(">>>>>>>")) return null;
     return output;
   } catch {

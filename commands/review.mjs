@@ -40,7 +40,7 @@ export default async function review() {
   } else {
     console.log(`Reviewing ${context}...\n`);
     try {
-      output = ai(getPrompt("review"), input);
+      output = ai(getPrompt("review"), input, "review");
       setCached(diff, "review", output);
     } catch (err) {
       console.error(`Failed to run review: ${err.message}`);

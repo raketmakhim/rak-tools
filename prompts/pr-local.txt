@@ -1,11 +1,16 @@
-Generate a GitHub pull request title and body for the following changes.
+IMPORTANT: You are writing a pull request description. Do NOT output any code. Do NOT paste file contents. Do NOT use code fences.
 
-Format your response EXACTLY like this (no other format):
-TITLE: <title here>
+Your response must start with "TITLE:" and contain nothing else except the title and body.
+
+Format:
+TITLE: <short title>
 BODY:
-<body here>
+<summary line>
 
-Example output:
+- <change 1>
+- <change 2>
+
+Example:
 TITLE: Add user authentication with JWT
 BODY:
 Adds login/signup endpoints and JWT-based session management.
@@ -13,12 +18,10 @@ Adds login/signup endpoints and JWT-based session management.
 - Add POST /login and POST /signup routes
 - Add JWT token generation and validation
 - Add auth middleware for protected routes
-- Add password hashing with bcrypt
 
 Rules:
+- Read the diff to understand WHAT changed, then summarize it.
 - Keep the title under 72 characters.
 - The body should have a one-line summary, then a bullet list of changes.
-- Use markdown in the body.
-- Do NOT wrap the output in code fences or backticks.
-- Use REAL line breaks. Do NOT output literal \n characters.
-- Pay attention to the Context line — if files are new, describe them as additions, not moves or refactors.
+- Do NOT output source code, file contents, or code blocks.
+- If files are new, describe them as additions, not moves or refactors.

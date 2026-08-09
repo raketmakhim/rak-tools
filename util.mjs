@@ -1,7 +1,42 @@
 import { execSync, spawnSync } from "child_process";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { createInterface } from "readline";
+import config from "./rak.config.mjs";
+
+const PROMPTS_DIR = join(import.meta.dirname, "prompts");
 
 export const MAX_BUFFER = 10 * 1024 * 1024;
+
+export function ai(prompt, input = "") {
+  const backend = process.env.RAK_AI || config.ai || "claude";
+  const stdin = input ? prompt + "\n\n" + input : prompt;
+
+  if (backend === "local") {
+    const { url, model } = config.local || {};
+    const body = JSON.stringify({
+      model: process.env.RAK_AI_MODEL || model || "qwen2.5-coder:7b",
+      messages: input
+        ? [{ role: "system", content: prompt }, { role: "user", content: input }]
+        : [{ role: "user", content: prompt }],
+      stream: false,
+    });
+    const res = spawnSync("curl", [
+      "-s", process.env.RAK_AI_URL || url || "http://localhost:11434/api/chat",
+      "-H", "Content-Type: application/json",
+      "-d", "@-",
+    ], { input: body, encoding: "utf-8", maxBuffer: MAX_BUFFER });
+    if (res.error) throw res.error;
+    if (res.status !== 0) throw new Error(res.stderr?.trim() || "Local AI request failed");
+    return (JSON.parse(res.stdout).message?.content || "").replace(/\\n/g, "\n").trim();
+  }
+
+  return execSync('claude -p "Follow the instructions provided via stdin."', {
+    input: stdin,
+    encoding: "utf-8",
+    maxBuffer: MAX_BUFFER,
+  }).trim();
+}
 
 export function prompt(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -30,6 +65,12 @@ export const c = {
   cyan: (s) => `\x1b[36m${s}\x1b[0m`,
   grey: (s) => `\x1b[90m${s}\x1b[0m`,
 };
+
+export function getPrompt(command) {
+  const backend = process.env.RAK_AI || config.ai || "claude";
+  const variant = backend === "local" ? "local" : "claude";
+  return readFileSync(join(PROMPTS_DIR, `${command}-${variant}.txt`), "utf-8").trim();
+}
 
 export function getDefaultBranch() {
   for (const cmd of [

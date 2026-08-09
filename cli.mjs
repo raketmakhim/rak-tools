@@ -3,12 +3,18 @@
 import { pathToFileURL } from "url";
 import { existsSync } from "fs";
 import { join } from "path";
+import config from "./rak.config.mjs";
 
 const __dirname = import.meta.dirname;
 
 const command = process.argv[2];
 
 if (!command) {
+  const backend = process.env.RAK_AI || config.ai || "claude";
+  const label = backend === "local"
+    ? `local (${config.local?.model || "unknown"})`
+    : "claude";
+
   console.log(`Usage: rak <command>
 
 Commands:
@@ -20,6 +26,9 @@ Commands:
   history   Show git history for a file
   slim      Find ways to simplify and shorten code
   rebase    Rebase onto default branch with AI conflict resolution
+  cache     Clear the AI response cache
+
+AI backend: ${label}
 
 Run 'rak <command> --help' for more info on a command.`);
   process.exit(0);

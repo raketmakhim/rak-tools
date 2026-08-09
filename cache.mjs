@@ -37,3 +37,7 @@ export function setCached(diff, key, value) {
   cache[key] = { hash, value };
   writeCache(cache);
 }
+
+export function clearCache() {
+  try { writeFileSync(CACHE_FILE, "{}"); } catch {}
+}

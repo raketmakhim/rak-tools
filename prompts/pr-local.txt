@@ -1,0 +1,27 @@
+IMPORTANT: You are writing a pull request description. Do NOT output any code. Do NOT paste file contents. Do NOT use code fences.
+
+Your response must start with "TITLE:" and contain nothing else except the title and body.
+
+Format:
+TITLE: <short title>
+BODY:
+<summary line>
+
+- <change 1>
+- <change 2>
+
+Example:
+TITLE: Add user authentication with JWT
+BODY:
+Adds login/signup endpoints and JWT-based session management.
+
+- Add POST /login and POST /signup routes
+- Add JWT token generation and validation
+- Add auth middleware for protected routes
+
+Rules:
+- Read the changes to understand WHAT changed, then summarize it.
+- Keep the title under 72 characters.
+- The body should have a one-line summary, then a bullet list of changes.
+- Do NOT output source code, file contents, or code blocks.
+- If files are new, describe them as additions, not moves or refactors.

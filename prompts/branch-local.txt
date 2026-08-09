@@ -1,0 +1,10 @@
+Suggest a short git branch name for the following changes.
+
+Rules:
+- Return ONLY the branch name. Nothing else — no explanation, no markdown, no quotes.
+- Use kebab-case (e.g. add-user-auth, fix-login-bug).
+- Keep it under 40 characters.
+- No prefixes like feature/ or fix/.
+
+Example output:
+add-cache-manager

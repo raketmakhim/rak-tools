@@ -1,8 +1,6 @@
 import { execSync } from "child_process";
-import { readFileSync, writeFileSync, unlinkSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
-import { run, prompt, c, getDefaultBranch, MAX_BUFFER } from "../util.mjs";
+import { readFileSync, writeFileSync } from "fs";
+import { ai, getPrompt, run, prompt, c, getDefaultBranch } from "../util.mjs";
 
 export default async function rebase() {
   const branch = run("git branch --show-current");
@@ -122,25 +120,11 @@ function getConflictedFiles() {
 }
 
 async function resolveWithAI(file, content) {
-  const inputFile = join(tmpdir(), `rak-rebase-${process.pid}.txt`);
-  const aiPrompt = `You are resolving a git merge conflict during a rebase. The file below contains conflict markers (<<<<<<< ======= >>>>>>>). During rebase, the section between <<<<<<< and ======= is the upstream (base) side, and the section between ======= and >>>>>>> is the user's own changes being replayed. Produce the final resolved file content — no conflict markers, no explanations, just the working code. Pick the best combination of both sides. If unsure, prefer the user's changes (the section after =======).
-
-File: ${file}
-
-${content}`;
-
   try {
-    writeFileSync(inputFile, aiPrompt);
-    const output = execSync(
-      `claude -p "Resolve the merge conflict in the file provided via stdin. Output ONLY the resolved file content, nothing else." < ${JSON.stringify(inputFile)}`,
-      { encoding: "utf-8", maxBuffer: MAX_BUFFER }
-    ).trim();
-
+    const output = ai(getPrompt("rebase"), `File: ${file}\n\n${content}`);
     if (output.includes("<<<<<<<") || output.includes(">>>>>>>")) return null;
     return output;
   } catch {
     return null;
-  } finally {
-    try { unlinkSync(inputFile); } catch {}
   }
 }

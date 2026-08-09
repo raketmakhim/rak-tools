@@ -10,25 +10,25 @@ const __dirname = import.meta.dirname;
 const command = process.argv[2];
 
 if (!command) {
-  const backend = process.env.RAK_AI || config.ai || "claude";
-  const label = backend === "local"
-    ? `local (${config.local?.model || "unknown"})`
-    : "claude";
+  const defaultBackend = process.env.RAK_AI || config.ai || "claude";
+  const localLabel = `local (${config.local?.model || "unknown"})`;
+  const label = (be) => (be === "local" ? localLabel : "claude");
+  const b = (cmd) => label(config.commands?.[cmd] || defaultBackend);
 
   console.log(`Usage: rak <command>
 
 Commands:
-  commit    Generate a commit message and push changes
-  pr        Create a GitHub PR with AI-generated title/body
-  branch    Create and switch to an AI-named branch from current changes
+  commit    Generate a commit message and push changes  [${b("commit")}]
+  pr        Create a GitHub PR with AI-generated title/body  [${b("pr")}]
+  branch    Create and switch to an AI-named branch  [${b("branch")}]
   clean     Delete all merged branches
-  review    AI code review of current changes
+  review    AI code review of current changes  [${b("review")}]
+  slim      Find ways to simplify and shorten code  [${b("slim")}]
+  rebase    Rebase with AI conflict resolution  [${b("rebase")}]
   history   Show git history for a file
-  slim      Find ways to simplify and shorten code
-  rebase    Rebase onto default branch with AI conflict resolution
   cache     Clear the AI response cache
 
-AI backend: ${label}
+Default backend: ${label(defaultBackend)}
 
 Run 'rak <command> --help' for more info on a command.`);
   process.exit(0);

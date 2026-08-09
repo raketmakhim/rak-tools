@@ -26,7 +26,7 @@ export default async function commit() {
     message = cached;
   } else {
     console.log("\nGenerating commit message...\n");
-    message = ai(getPrompt("commit"), diff);
+    message = ai(getPrompt("commit"), diff, "commit");
     setCached(diff, "commit", message);
   }
 

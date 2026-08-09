@@ -1,6 +1,16 @@
 export default {
-  // "claude" (default) or "local"
+  // Default backend: "claude" or "local"
   ai: "local",
+
+  // Per-command overrides (optional)
+  commands: {
+    review: "claude",
+    // commit: "local",
+    // pr: "local",
+    // branch: "local",
+   slim: "claude",
+    // rebase: "claude",
+  },
 
   // Local LLM settings (used when ai: "local")
   local: {

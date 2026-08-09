@@ -21,7 +21,7 @@ export default async function branch() {
     console.log("\n(cached result)\n");
   } else {
     console.log("\nGenerating branch name...\n");
-    name = ai(getPrompt("branch"), summary);
+    name = ai(getPrompt("branch"), summary, "branch");
     setCached(summary, "branch", name);
   }
 

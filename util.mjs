@@ -8,8 +8,14 @@ const PROMPTS_DIR = join(import.meta.dirname, "prompts");
 
 export const MAX_BUFFER = 10 * 1024 * 1024;
 
-export function ai(prompt, input = "") {
-  const backend = process.env.RAK_AI || config.ai || "claude";
+export function getBackend(command) {
+  if (process.env.RAK_AI) return process.env.RAK_AI;
+  if (command && config.commands?.[command]) return config.commands[command];
+  return config.ai || "claude";
+}
+
+export function ai(prompt, input = "", command) {
+  const backend = getBackend(command);
   const stdin = input ? prompt + "\n\n" + input : prompt;
 
   if (backend === "local") {
@@ -67,8 +73,7 @@ export const c = {
 };
 
 export function getPrompt(command) {
-  const backend = process.env.RAK_AI || config.ai || "claude";
-  const variant = backend === "local" ? "local" : "claude";
+  const variant = getBackend(command) === "local" ? "local" : "claude";
   return readFileSync(join(PROMPTS_DIR, `${command}-${variant}.txt`), "utf-8").trim();
 }
 

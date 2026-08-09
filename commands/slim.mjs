@@ -75,7 +75,7 @@ function slimDiff() {
 
 function runClaude(input) {
   try {
-    return ai(getPrompt("slim"), input);
+    return ai(getPrompt("slim"), input, "slim");
   } catch (err) {
     console.error(`Failed to run analysis: ${err.message}`);
     process.exit(1);

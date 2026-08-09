@@ -20,4 +20,5 @@ Rules:
 - The body should have a one-line summary, then a bullet list of changes.
 - Use markdown in the body.
 - Do NOT wrap the output in code fences or backticks.
+- Use REAL line breaks. Do NOT output literal \n characters.
 - Pay attention to the Context line — if files are new, describe them as additions, not moves or refactors.

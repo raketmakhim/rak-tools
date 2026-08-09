@@ -28,7 +28,7 @@ export function ai(prompt, input = "") {
     ], { input: body, encoding: "utf-8", maxBuffer: MAX_BUFFER });
     if (res.error) throw res.error;
     if (res.status !== 0) throw new Error(res.stderr?.trim() || "Local AI request failed");
-    return (JSON.parse(res.stdout).message?.content || "").trim();
+    return (JSON.parse(res.stdout).message?.content || "").replace(/\\n/g, "\n").trim();
   }
 
   return execSync('claude -p "Follow the instructions provided via stdin."', {

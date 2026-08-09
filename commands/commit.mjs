@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { ai, getPrompt, run, prompt } from "../util.mjs";
 import { getCached, setCached } from "../cache.mjs";
 
@@ -45,9 +45,10 @@ export default async function commit() {
     return false;
   }
 
-  execSync("git commit -m " + JSON.stringify(finalMessage), {
+  const res = spawnSync("git", ["commit", "-m", finalMessage], {
     stdio: "inherit",
   });
+  if (res.status !== 0) process.exit(res.status);
 
   console.log("\nPushing to remote...");
   execSync("git push -u origin HEAD", { stdio: "inherit" });

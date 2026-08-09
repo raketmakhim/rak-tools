@@ -1,8 +1,6 @@
-import { execSync } from "child_process";
-import { writeFileSync, unlinkSync, readFileSync } from "fs";
-import { join, extname } from "path";
-import { tmpdir } from "os";
-import { run, c, getDefaultBranch, MAX_BUFFER } from "../util.mjs";
+import { readFileSync } from "fs";
+import { extname } from "path";
+import { ai, run, c, getDefaultBranch } from "../util.mjs";
 
 const SLIM_PROMPT = `You are a code efficiency expert. Your only job is to find ways to make code shorter and simpler. For each finding, show:
 
@@ -92,19 +90,11 @@ function slimDiff() {
 }
 
 function runClaude(input) {
-  const inputFile = join(tmpdir(), `rak-slim-${process.pid}.txt`);
   try {
-    writeFileSync(inputFile, SLIM_PROMPT + "\n\n" + input);
-    return execSync(
-      `claude -p "Follow the instructions and analyze the code provided via stdin." < ${JSON.stringify(inputFile)}`,
-      { encoding: "utf-8", maxBuffer: MAX_BUFFER }
-    ).trim();
+    return ai(SLIM_PROMPT, input);
   } catch (err) {
-    const stderr = err.stderr?.toString().trim();
-    console.error(`Failed to run analysis: ${stderr || err.message}`);
+    console.error(`Failed to run analysis: ${err.message}`);
     process.exit(1);
-  } finally {
-    try { unlinkSync(inputFile); } catch {}
   }
 }
 

@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from "child_process";
-import { run, prompt, getDefaultBranch } from "../util.mjs";
+import { ai, run, prompt, getDefaultBranch } from "../util.mjs";
 import commit from "./commit.mjs";
 
 export default async function pr() {
@@ -60,9 +60,9 @@ export default async function pr() {
 
   const input = `Context: Branch "${branch}" → "${defaultBranch}". ${context}\n\nCommits:\n${log}\n\nDiff:\n${fullDiff}`;
 
-  const generated = run(
-    `claude -p "Generate a GitHub pull request title and body for the following changes. Format your response EXACTLY as:\nTITLE: <title here>\nBODY:\n<body here>\n\nKeep the title under 72 characters. The body should have a short summary, then a bullet list of what was added or changed. Use markdown. Be concise. Pay attention to the Context line — if files are new, describe them as additions, not moves or refactors."`,
-    { input }
+  const generated = ai(
+    "Generate a GitHub pull request title and body for the following changes. Format your response EXACTLY as:\nTITLE: <title here>\nBODY:\n<body here>\n\nKeep the title under 72 characters. The body should have a short summary, then a bullet list of what was added or changed. Use markdown. Be concise. Pay attention to the Context line — if files are new, describe them as additions, not moves or refactors.",
+    input
   );
 
   const titleMatch = generated.match(/^title:\s*(.+)/im);

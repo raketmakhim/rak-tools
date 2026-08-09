@@ -1,4 +1,4 @@
-import { run, prompt } from "../util.mjs";
+import { ai, run, prompt } from "../util.mjs";
 import { getCached, setCached } from "../cache.mjs";
 
 export default async function branch() {
@@ -21,9 +21,9 @@ export default async function branch() {
     console.log("\n(cached result)\n");
   } else {
     console.log("\nGenerating branch name...\n");
-    name = run(
-      `claude -p "Suggest a short git branch name for the following changes. Return ONLY the branch name, nothing else. Use kebab-case. Keep it under 40 characters. No prefixes like feature/ or fix/."`,
-      { input: summary }
+    name = ai(
+      "Suggest a short git branch name for the following changes. Return ONLY the branch name, nothing else. Use kebab-case. Keep it under 40 characters. No prefixes like feature/ or fix/.",
+      summary
     );
     setCached(summary, "branch", name);
   }

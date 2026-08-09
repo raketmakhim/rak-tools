@@ -1,8 +1,4 @@
-import { execSync } from "child_process";
-import { writeFileSync, unlinkSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
-import { run, getDefaultBranch, MAX_BUFFER } from "../util.mjs";
+import { ai, run, getDefaultBranch } from "../util.mjs";
 import { getCached, setCached } from "../cache.mjs";
 
 const REVIEW_PROMPT = `You are a senior code reviewer. Review the following diff and provide feedback. For each issue found, categorize it as one of: [BUG] [SECURITY] [STYLE] [PERF] [SUGGESTION]. Format each finding as:
@@ -49,20 +45,12 @@ export default async function review() {
     output = cached;
   } else {
     console.log(`Reviewing ${context}...\n`);
-    const inputFile = join(tmpdir(), `rak-review-${process.pid}.txt`);
     try {
-      writeFileSync(inputFile, REVIEW_PROMPT + "\n\n" + input);
-      output = execSync(
-        `claude -p "Follow the instructions and review the code changes provided via stdin." < ${JSON.stringify(inputFile)}`,
-        { encoding: "utf-8", maxBuffer: MAX_BUFFER }
-      ).trim();
+      output = ai(REVIEW_PROMPT, input);
       setCached(diff, "review", output);
     } catch (err) {
-      const stderr = err.stderr?.toString().trim();
-      console.error(`Failed to run review: ${stderr || err.message}`);
+      console.error(`Failed to run review: ${err.message}`);
       process.exit(1);
-    } finally {
-      try { unlinkSync(inputFile); } catch {}
     }
   }
 

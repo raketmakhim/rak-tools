@@ -1,7 +1,41 @@
 import { execSync, spawnSync } from "child_process";
 import { createInterface } from "readline";
+import config from "./rak.config.mjs";
 
 export const MAX_BUFFER = 10 * 1024 * 1024;
+
+export function ai(prompt, input = "") {
+  const backend = process.env.RAK_AI || config.ai || "claude";
+
+  if (backend === "local") {
+    const { url, model } = config.local || {};
+    const messages = input
+      ? [{ role: "system", content: prompt }, { role: "user", content: input }]
+      : [{ role: "user", content: prompt }];
+    const body = JSON.stringify({
+      model: process.env.RAK_AI_MODEL || model || "qwen2.5-coder:7b",
+      messages,
+      stream: false,
+    });
+    const res = spawnSync("curl", [
+      "-s", process.env.RAK_AI_URL || url || "http://localhost:11434/api/chat",
+      "-H", "Content-Type: application/json",
+      "-d", "@-",
+    ], { input: body, encoding: "utf-8", maxBuffer: MAX_BUFFER });
+    if (res.error) throw res.error;
+    if (res.status !== 0) throw new Error(res.stderr?.trim() || "Local AI request failed");
+    return (JSON.parse(res.stdout).message?.content || "").trim();
+  }
+
+  const res = spawnSync("claude", ["-p", prompt], {
+    input: input || undefined,
+    encoding: "utf-8",
+    maxBuffer: MAX_BUFFER,
+  });
+  if (res.error) throw res.error;
+  if (res.status !== 0) throw new Error(res.stderr?.trim() || "AI command failed");
+  return (res.stdout || "").trim();
+}
 
 export function prompt(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });

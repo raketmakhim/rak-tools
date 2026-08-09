@@ -6,15 +6,15 @@ export const MAX_BUFFER = 10 * 1024 * 1024;
 
 export function ai(prompt, input = "") {
   const backend = process.env.RAK_AI || config.ai || "claude";
+  const stdin = input ? prompt + "\n\n" + input : prompt;
 
   if (backend === "local") {
     const { url, model } = config.local || {};
-    const messages = input
-      ? [{ role: "system", content: prompt }, { role: "user", content: input }]
-      : [{ role: "user", content: prompt }];
     const body = JSON.stringify({
       model: process.env.RAK_AI_MODEL || model || "qwen2.5-coder:7b",
-      messages,
+      messages: input
+        ? [{ role: "system", content: prompt }, { role: "user", content: input }]
+        : [{ role: "user", content: prompt }],
       stream: false,
     });
     const res = spawnSync("curl", [
@@ -27,14 +27,11 @@ export function ai(prompt, input = "") {
     return (JSON.parse(res.stdout).message?.content || "").trim();
   }
 
-  const res = spawnSync("claude", ["-p", prompt], {
-    input: input || undefined,
+  return execSync('claude -p "Follow the instructions provided via stdin."', {
+    input: stdin,
     encoding: "utf-8",
     maxBuffer: MAX_BUFFER,
-  });
-  if (res.error) throw res.error;
-  if (res.status !== 0) throw new Error(res.stderr?.trim() || "AI command failed");
-  return (res.stdout || "").trim();
+  }).trim();
 }
 
 export function prompt(question) {

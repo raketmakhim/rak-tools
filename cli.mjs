@@ -12,7 +12,7 @@ const command = process.argv[2];
 if (!command) {
   const backend = process.env.RAK_AI || config.ai || "claude";
   const label = backend === "local"
-    ? `local (${config.local?.model || "qwen2.5-coder:7b"})`
+    ? `local (${config.local?.model || "unknown"})`
     : "claude";
 
   console.log(`Usage: rak <command>

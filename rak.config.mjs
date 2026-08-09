@@ -5,6 +5,6 @@ export default {
   // Local LLM settings (used when ai: "local")
   local: {
     url: "http://localhost:11434/api/chat",
-    model: "qwen2.5-coder:7b",
+    model: "qwen2.5-coder:14b",
   },
 };

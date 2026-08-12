@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from "child_process";
-import { ai, getBackend, getPrompt, run, prompt, getDefaultBranch } from "../util.mjs";
+import { ai, getBackend, getPrompt, run, prompt, getDefaultBranch, withTicket, getPrTicket } from "../util.mjs";
 import commit from "./commit.mjs";
 
 export default async function pr() {
@@ -70,7 +70,8 @@ export default async function pr() {
   const titleMatch = generated.match(/^title:\s*(.+)/im);
   const bodyMatch = generated.match(/body:\s*\n([\s\S]+)/im);
 
-  const title = titleMatch?.[1]?.trim() || branch;
+  const prTicket = getPrTicket();
+  const title = withTicket(titleMatch?.[1]?.trim() || branch, prTicket);
   const body = (bodyMatch?.[1] || generated)
     .replace(/^Title:.*\n*/im, "")
     .trim();
@@ -87,7 +88,7 @@ export default async function pr() {
 
   const choice = answer.toLowerCase();
   if (choice === "e") {
-    finalTitle = await prompt("Enter PR title: ");
+    finalTitle = withTicket(await prompt("Enter PR title: "), prTicket);
   } else if (choice !== "y") {
     console.log("PR cancelled.");
     process.exit(0);

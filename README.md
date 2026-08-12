@@ -1,146 +1,157 @@
 # rak-tools
 
-Personal CLI toolbox. Subcommand-based: `rak <command>`.
+Git workflow CLI. AI commands run on either the Claude Code CLI or a local Ollama model, chosen per command.
 
-## Prerequisites
-
-- Node.js 21+ (`import.meta.dirname` support)
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (`npm i -g @anthropic-ai/claude-code`)
-- [GitHub CLI](https://cli.github.com/) (`winget install GitHub.cli`, then `gh auth login`)
-
-## Install
+## Quick start
 
 ```bash
-git clone https://github.com/raketmakhim/rak-tools.git
-cd rak-tools
-npm link
+git clone https://src.shef.ac.uk/cs1rma/rak-tools.git
+cd rak-tools && npm link          # installs the `rak` binary globally
+rak                                # commands, current backend, project key
 ```
 
-`npm link` symlinks the `rak` binary globally. Works immediately from any directory, any terminal. Changes to the source take effect without reinstalling.
+Needs Node 21+ and `gh` (authed). Any OS, except `rak aws` which is PowerShell only. Then either:
 
-To uninstall: `npm unlink -g rak-tools`
+- **Claude backend:** `npm i -g @anthropic-ai/claude-code`
+- **Local backend:** install [Ollama](https://ollama.com/), `ollama pull qwen2.5-coder:7b`, set the tag in `rak.config.mjs`
+
+Uninstall: `npm unlink -g rak-tools`
 
 ## Commands
 
-### `rak commit`
+| Command | Does | AI | Cached |
+| --- | --- | --- | --- |
+| `rak commit` | Commit message from staged diff, then commit + push | yes | yes |
+| `rak pr` | Create or update a GitHub PR with generated title/body | yes | no |
+| `rak branch` | Kebab-case branch name from uncommitted changes, then checkout | yes | yes |
+| `rak review` | Code review, tagged `[BUG]` `[SECURITY]` `[PERF]` `[SUGGESTION]` `[STYLE]` | yes | yes |
+| `rak slim [file\|all]` | `[CUT]` findings with before/after snippets | yes | no |
+| `rak rebase` | Rebase onto default branch, AI conflict resolution | yes | no |
+| `rak history <file>` | Commits touching a file; enter a number for its diff | no | no |
+| `rak aws [profile]` | Pick an AWS profile, SSO log in if needed, set `AWS_PROFILE` | no | no |
+| `rak tf <cmd> [env]` | `terraform init` then `init\|plan\|apply\|destroy` on the stack you are in | no | no |
+| `rak clean` | Delete local branches whose PR is `MERGED` | no | no |
+| `rak cache` | Clear the response cache | no | no |
+| `rak ai [backend] [cmd]` | Show which backend each command uses, or change it | no | no |
 
-AI-generated commit messages via Claude, then pushes.
+Every AI command shows its output and prompts `y` accept / `n` cancel / `e` edit before doing anything.
 
-1. Staged changes exist &rarr; uses them. Nothing staged &rarr; stages everything (`git add -A`).
-2. Pipes `git diff --cached` to Claude to generate a conventional commit message.
-3. Displays the message. Prompts: `y` accept, `n` cancel, `e` edit manually.
-4. Commits and pushes. Sets upstream automatically on first push.
-5. Results are cached &mdash; re-running on the same diff skips the AI call.
+### Behaviour worth knowing
 
-### `rak pr`
+- **`branch`**: asks for the ticket before the AI call, so you are not waiting on it. Blank gives the bare name.
+- **`commit`**: stages everything with `git add -A` if nothing is staged. Pushes with `-u`.
+- **`pr`**: offers to commit dirty changes first. Refuses on the default branch or with nothing ahead of it. Sends `--stat` on `local`, the full diff on `claude`. Updates an existing PR rather than duplicating it.
+- **`review`** and **`slim`** (no args): feature branch diffs committed + uncommitted against the default branch; default branch diffs uncommitted only. `rak slim <file>` reads one file, `rak slim all` loops every tracked code file.
+- **`rebase`**: fetches first, then per-file accept or skip at each conflict stop. On the default branch it just pulls.
+- **`clean`**: switches to the default branch and `pull --ff-only` first, so the branch you just merged is eligible. Stays put if the tree is dirty. Deletes with `-d`, falling back to `-D` for squash merges.
+- **`aws`**: PowerShell only. Needs the AWS CLI and the shell integration below. Skips `aws sso login` while a cached token is valid. Pass a profile to skip the menu.
+- **`tf`**: run it from a folder containing `tfvars/`. Environments come from `tfvars/<env>.tfvars`. Always `init -reconfigure` with `<env>.backend.tfvars` first, then your command with `-var-file`.
 
-AI-generated pull request via Claude + GitHub CLI.
+## Ticket prefixes
 
-1. Detects uncommitted changes &rarr; offers to run `rak commit` first.
-2. Guards: must be on a feature branch.
-3. Pushes branch to origin if not already pushed.
-4. Gathers all commits and diff since divergence from default branch.
-5. Pipes to Claude to generate a PR title and body.
-6. Displays the proposal. Prompts: `y` create, `n` cancel, `e` edit title.
-7. If PR already exists, updates the title and body instead of creating a new one.
+```bash
+git config rak.project CDC    # per repo, since one clone serves them all
+```
 
-### `rak branch`
+`rak branch` then asks for a number, taking `1234`, `CDC-1234` or `#1234`. `commit` and `pr` read it back out of the branch name, so they never ask.
 
-AI-suggested branch name from uncommitted changes.
+| Branch | Commit subject | PR title |
+| --- | --- | --- |
+| `CDC-1234/add-user-auth` | `[CDC-1234] feat: add user auth` | `[CDC-1234] Add user auth` |
+| `add-user-auth` (blank number) | unprefixed | `[CDC-000] Add user auth` |
 
-1. Detects uncommitted changes (staged, unstaged, untracked).
-2. Pipes the diff to Claude to suggest a kebab-case branch name.
-3. Displays the suggestion. Prompts: `y` accept, `n` cancel, `e` edit manually.
-4. Runs `git checkout -b <name>` &mdash; changes carry over to the new branch.
-5. Results are cached &mdash; re-running on the same diff skips the AI call.
+Any `<key>-<number>/` prefix parses, so a teammate's `DFLOW-7/...` works too. Already-prefixed text is never doubled. `config.project` in `rak.config.mjs` is a global fallback.
 
-### `rak review`
+## Shell integration (PowerShell)
 
-AI code review of current changes via Claude.
+Required for `rak aws`. Run once from your clone to append the right absolute path to `$PROFILE`:
 
-1. On a feature branch &rarr; diffs all committed + uncommitted changes against the default branch.
-2. On the default branch &rarr; diffs uncommitted changes only.
-3. Pipes the diff to Claude for review. Findings are categorized: `[BUG]` `[SECURITY]` `[PERF]` `[SUGGESTION]` `[STYLE]`.
-4. Output is color-coded: bugs/security in red, perf in yellow, suggestions in green, style in grey.
-5. Results are cached &mdash; re-running on the same diff skips the AI call.
+```powershell
+Add-Content $PROFILE ". `"$(Resolve-Path .\scripts\profile.ps1)`""
+. $PROFILE
+```
 
-### `rak slim [file|all]`
+It shadows the `rak` binary with a function that runs `scripts/<command>.ps1` in your session, forwards everything else to Node, and adds `raws` as shorthand for `rak aws`. Without it, `rak aws` runs as a child process and cannot set `AWS_PROFILE` in your shell; it says so rather than pretending otherwise. No bash equivalent yet.
 
-AI-powered code slimming &mdash; finds ways to shorten and simplify code.
+## Config
 
-- `rak slim <file>` &mdash; analyzes that file for redundancy, verbosity, and over-abstraction.
-- `rak slim all` &mdash; analyzes every tracked code file in the repo, one by one.
-- `rak slim` (no args) &mdash; analyzes the current branch diff (same scope as `rak review`).
+`rak.config.mjs`:
 
-Outputs `[CUT]` findings ranked by impact, each with before/after snippets. Focuses only on making code leaner &mdash; no style or naming suggestions.
+```js
+export default {
+  ai: "local",                                   // default backend
+  commands: { review: "claude", slim: "claude" }, // per-command overrides
+  local: { url: "http://localhost:11434/api/chat", model: "qwen2.5-coder:14b" },
+};
+```
 
-### `rak rebase`
+Backend resolves as `RAK_AI` → `commands.<name>` → `ai` → `claude`. `rak ai` edits the file for you, keeping its comments:
 
-Rebases current branch onto the default branch with AI-powered conflict resolution.
+```bash
+rak ai                  # what each command currently uses
+rak ai claude           # switch the default
+rak ai local commit     # override one command
+```
 
-1. Fetches latest default branch from origin.
-2. Runs `git rebase origin/<default>`.
-3. If conflicts occur, lists conflicted files and offers to resolve with Claude.
-4. For each file: shows the AI-proposed resolution, prompts to accept or skip.
-5. Handles multi-commit rebases &mdash; loops through each conflict stop automatically.
-6. Once all conflicts are resolved, continues the rebase.
-7. On the default branch: just pulls latest.
+| Env var | Overrides |
+| --- | --- |
+| `RAK_AI` | Backend for every command (`claude` or `local`) |
+| `RAK_AI_MODEL` | `local.model` |
+| `RAK_AI_URL` | `local.url` |
 
-### `rak history <file>`
+```bash
+RAK_AI=claude rak commit    # one-off
+```
 
-Interactive git history viewer for a single file.
+## Local LLM setup
 
-1. Shows all commits that touched the given file, newest first.
-2. Displays hash, message, author, and relative date.
-3. Enter a number to view the full diff for that commit.
+1. Install [Ollama](https://ollama.com/). The Windows installer adds it to `PATH` and runs it as a service.
+2. `ollama pull qwen2.5-coder:7b`. Models land in `C:\Users\<username>\.ollama\models`; `OLLAMA_MODELS` relocates them.
+3. Set `local.model` to the exact tag from `ollama list`.
+4. Check it is up: `curl http://localhost:11434/api/tags`. If not, `ollama serve`.
 
-### `rak clean`
+`7b` keeps a decent pace on a laptop; `14b` is better but wants more RAM/VRAM. The first request after startup is slow while the model loads. Connection refused means Ollama is down or the tag does not exist locally.
 
-Deletes local branches whose PRs were merged on GitHub.
+## Prompts
 
-1. Runs `git fetch --prune` to sync with remote.
-2. Checks each local branch against GitHub via `gh pr view` &mdash; only targets branches with a `MERGED` PR.
-3. Lists matched branches for confirmation. Current branch and default branch are always kept.
-4. Deletes with `git branch -d`, falls back to `-D` for squash-merged branches.
+`prompts/<command>-claude.txt` and `prompts/<command>-local.txt`. Two variants because small models need tighter instructions. Edit to change behaviour, no code change needed.
 
 ## Caching
 
-Commands that call Claude (`commit`, `branch`, `review`) cache results keyed by a hash of their input diff. Re-running the same command with no code changes returns the cached result instantly without an AI call. Any change to the diff invalidates the cache automatically. Cache is stored in `%TEMP%/rak-cache/`.
+`commit`, `branch`, and `review` key results on a hash of their input diff, so re-running with no code changes costs nothing. One entry per command, in `%TEMP%/rak-cache/diff-cache.json`. Clear with `rak cache`.
+
+## Default branch detection
+
+Tried in order: `gh repo view --json defaultBranchRef`, `git symbolic-ref refs/remotes/origin/HEAD`, then `main`. Used by `pr`, `review`, `slim`, `rebase`, `clean`. If step 2 fails, run `git remote set-head origin -a`.
 
 ## Adding commands
 
-Drop a file in `commands/`. Filename becomes the subcommand.
+Filename becomes the subcommand. No registration. Extra args forwarded either way.
 
 ```
 commands/example.mjs  →  rak example
+scripts/example.ps1   →  rak example    (fallback when no .mjs exists)
 ```
-
-Export a default async function:
 
 ```js
 export default async function example() {
-  // ...
+  const arg = process.argv[3];
 }
 ```
 
-Shared utilities (`run`, `prompt`, colors, `getDefaultBranch`) are in `util.mjs`. Cache helpers (`getCached`, `setCached`) are in `cache.mjs`.
+`util.mjs` exports `ai`, `getPrompt`, `getBackend`, `run`, `prompt`, `c` (colours), `getDefaultBranch`, `getProject`, `getTicket`, `getPrTicket`, `withTicket`. `cache.mjs` exports `getCached`, `setCached`, `clearCache`.
 
-No registration needed &mdash; the router discovers commands by filename.
+For an AI command, add both prompt variants and call `ai(getPrompt("name"), input, "name")`. The third argument routes it to a backend.
 
 ## Structure
 
 ```
 cli.mjs              Entry point (rak binary)
-util.mjs             Shared helpers (run, prompt, colors, getDefaultBranch)
+rak.config.mjs       Backend selection, local model settings
+util.mjs             Shared helpers
 cache.mjs            Per-command result caching
-commands/
-  branch.mjs         rak branch
-  clean.mjs          rak clean
-  commit.mjs         rak commit
-  history.mjs        rak history
-  pr.mjs             rak pr
-  rebase.mjs         rak rebase
-  review.mjs         rak review
-  slim.mjs           rak slim
-package.json
+commands/*.mjs       One file per subcommand
+scripts/aws.ps1      rak aws (PowerShell, sets AWS_PROFILE)
+scripts/profile.ps1  Shell integration, loaded from $PROFILE
+prompts/*.txt        <command>-claude.txt, <command>-local.txt
 ```

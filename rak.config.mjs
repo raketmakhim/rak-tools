@@ -16,6 +16,9 @@ export default {
     // rebase: "claude",
   },
 
+  // Browser binary for `rak open` (e.g. "msedge", "chrome", "firefox")
+  browser: "msedge",
+
   // Sites opened by `rak open` — customize URLs for your team
   open: {
     calendar: "https://calendar.google.com",

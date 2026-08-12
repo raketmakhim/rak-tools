@@ -11,6 +11,7 @@ const defaults = {
 
 export default function open() {
   const sites = config.open || defaults;
+  const browser = config.browser || "msedge";
   const names = Object.keys(sites);
 
   if (!names.length) {
@@ -18,11 +19,15 @@ export default function open() {
     return;
   }
 
-  console.log(`Opening ${names.length} tabs in Edge:\n`);
+  console.log(`Opening ${names.length} tabs in ${browser}:\n`);
   names.forEach((name) => console.log(`  ${c.cyan(name.padEnd(14))} ${c.grey(sites[name])}`));
 
   const urls = Object.values(sites);
-  spawnSync("cmd", ["/c", "start", "msedge", ...urls], { stdio: "inherit" });
+  const res = spawnSync(browser, urls, { stdio: "inherit", shell: false });
+  if (res.error) {
+    console.error(`Failed to launch ${browser}: ${res.error.message}`);
+    process.exit(1);
+  }
 
   console.log(`\n${c.green("Done!")}`);
 }

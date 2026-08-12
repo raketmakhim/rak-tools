@@ -1,11 +1,36 @@
 import { run, prompt, c, getDefaultBranch } from "../util.mjs";
 
 export default async function clean() {
-  const current = run("git branch --show-current");
+  let current = run("git branch --show-current");
 
   run("git fetch --prune");
 
   const defaultBranch = getDefaultBranch();
+
+  // Switching first means the branch you just merged is eligible for deletion,
+  // rather than being spared for the sole reason that you are standing on it.
+  if (current !== defaultBranch) {
+    if (run("git status --porcelain")) {
+      console.log(c.yellow(`Uncommitted changes, so staying on ${current}. It will be kept.\n`));
+    } else {
+      run("git", ["checkout", defaultBranch]);
+      current = defaultBranch;
+      console.log(`Switched to ${defaultBranch}.`);
+    }
+  }
+
+  if (current === defaultBranch) {
+    // ff-only: never invent a merge commit on the default branch.
+    try {
+      console.log(run("git", ["pull", "--ff-only"]));
+    } catch (err) {
+      // git leads with hint: lines, so prefer the real fatal:/error: line.
+      const lines = err.message.split("\n");
+      const reason = lines.find((l) => /^(fatal|error):/.test(l)) || lines[0];
+      console.log(c.yellow(`Could not pull ${defaultBranch}, continuing anyway.`));
+      console.log(c.grey(`  ${reason.trim()}\n`));
+    }
+  }
 
   const allLocal = run("git branch")
     .split("\n")

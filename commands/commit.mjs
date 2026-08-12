@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from "child_process";
-import { ai, getPrompt, run, prompt } from "../util.mjs";
+import { ai, getPrompt, run, prompt, withTicket } from "../util.mjs";
 import { getCached, setCached } from "../cache.mjs";
 
 export default async function commit() {
@@ -30,6 +30,10 @@ export default async function commit() {
     setCached(diff, "commit", message);
   }
 
+  // Applied after the cache, so the cached message stays ticket-free and stays
+  // valid if the same diff is committed on a different branch.
+  message = withTicket(message);
+
   console.log("--- Proposed commit message ---");
   console.log(message);
   console.log("-------------------------------\n");
@@ -39,7 +43,7 @@ export default async function commit() {
   let finalMessage = message;
 
   if (answer.toLowerCase() === "e") {
-    finalMessage = await prompt("Enter your commit message: ");
+    finalMessage = withTicket(await prompt("Enter your commit message: "));
   } else if (answer.toLowerCase() !== "y") {
     console.log("Commit cancelled. Changes remain staged.");
     return false;

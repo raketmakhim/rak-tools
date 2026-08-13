@@ -25,19 +25,21 @@ export default function open() {
   const urls = Object.values(sites);
 
   if (process.platform === "linux") {
+    const failed = [];
     for (const url of urls) {
       const res = spawnSync("xdg-open", [url], { stdio: "inherit" });
-      if (res.error) {
-        console.error(`Failed to launch ${url}: ${res.error.message}`);
-        process.exit(1);
-      }
+      if (res.error) failed.push(url);
+    }
+    if (failed.length) {
+      console.error(`\nFailed to launch: ${failed.join(", ")}`);
+      process.exit(1);
     }
     console.log(`\n${c.green("Done!")}`);
     return;
   }
 
   const [cmd, args] = process.platform === "win32"
-    ? ["cmd", ["/c", "start", browser, ...urls]]
+    ? ["cmd", ["/c", "start", '""', browser, ...urls]]
     : ["open", ["-a", browser, ...urls]];
 
   const res = spawnSync(cmd, args, { stdio: "inherit" });

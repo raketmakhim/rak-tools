@@ -30,6 +30,6 @@ export default {
   // Local LLM settings (used when ai: "local")
   local: {
     url: "http://localhost:11434/api/chat",
-    model: "deepseek-r1:14b",
+    model: "qwen3.6:35b-a3b",
   },
 };

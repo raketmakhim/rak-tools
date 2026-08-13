@@ -1,4 +1,4 @@
-import { spawnSync } from "child_process";
+import { execSync } from "child_process";
 import config from "../rak.config.mjs";
 import { c } from "../util.mjs";
 
@@ -23,9 +23,10 @@ export default function open() {
   names.forEach((name) => console.log(`  ${c.cyan(name.padEnd(14))} ${c.grey(sites[name])}`));
 
   const urls = Object.values(sites);
-  const res = spawnSync(browser, urls, { stdio: "inherit", shell: false });
-  if (res.error) {
-    console.error(`Failed to launch ${browser}: ${res.error.message}`);
+  try {
+    execSync(`start ${browser} ${urls.map((u) => `"${u}"`).join(" ")}`, { stdio: "inherit" });
+  } catch (err) {
+    console.error(`Failed to launch ${browser}: ${err.message}`);
     process.exit(1);
   }
 

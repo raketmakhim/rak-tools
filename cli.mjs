@@ -33,6 +33,7 @@ Commands:
   clean     Delete all merged branches
   commit    Generate a commit message and push changes  [${b("commit")}]
   history   Show git history for a file
+  open      Open daily tabs in Edge (calendar, jira, etc.)
   pr        Create a GitHub PR with AI-generated title/body  [${b("pr")}]
   rebase    Rebase with AI conflict resolution  [${b("rebase")}]
   review    AI code review of current changes  [${b("review")}]

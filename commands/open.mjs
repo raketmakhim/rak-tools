@@ -10,7 +10,7 @@ const defaults = {
 };
 
 export default function open() {
-  const sites = config.open || defaults;
+  const sites = { ...defaults, ...config.open };
   const browser = config.browser || "msedge";
   const names = Object.keys(sites);
 
@@ -38,11 +38,15 @@ export default function open() {
     return;
   }
 
-  const [cmd, args] = process.platform === "win32"
-    ? ["cmd", ["/c", "start", '""', browser, ...urls]]
-    : ["open", ["-a", browser, ...urls]];
+  // cmd.exe re-parses the whole line for its own operators (&, |, ^, ...)
+  // regardless of Node's argv quoting, so URLs need to be quoted ourselves
+  // and passed verbatim — otherwise a bare `&` in a query string (common in
+  // Jira/Confluence links) gets read as a command separator.
+  const [cmd, args, opts] = process.platform === "win32"
+    ? ["cmd", ["/c", "start", '""', `"${browser}"`, ...urls.map((u) => `"${u}"`)], { windowsVerbatimArguments: true }]
+    : ["open", ["-a", browser, ...urls], {}];
 
-  const res = spawnSync(cmd, args, { stdio: "inherit" });
+  const res = spawnSync(cmd, args, { stdio: "inherit", ...opts });
   if (res.error) {
     console.error(`Failed to launch ${browser}: ${res.error.message}`);
     process.exit(1);

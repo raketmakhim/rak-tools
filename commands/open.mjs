@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { spawnSync } from "child_process";
 import config from "../rak.config.mjs";
 import { c } from "../util.mjs";
 
@@ -23,10 +23,30 @@ export default function open() {
   names.forEach((name) => console.log(`  ${c.cyan(name.padEnd(14))} ${c.grey(sites[name])}`));
 
   const urls = Object.values(sites);
-  try {
-    execSync(`start ${browser} ${urls.map((u) => `"${u}"`).join(" ")}`, { stdio: "inherit" });
-  } catch (err) {
-    console.error(`Failed to launch ${browser}: ${err.message}`);
+
+  if (process.platform === "linux") {
+    for (const url of urls) {
+      const res = spawnSync("xdg-open", [url], { stdio: "inherit" });
+      if (res.error) {
+        console.error(`Failed to launch ${url}: ${res.error.message}`);
+        process.exit(1);
+      }
+    }
+    console.log(`\n${c.green("Done!")}`);
+    return;
+  }
+
+  const [cmd, args] = process.platform === "win32"
+    ? ["cmd", ["/c", "start", browser, ...urls]]
+    : ["open", ["-a", browser, ...urls]];
+
+  const res = spawnSync(cmd, args, { stdio: "inherit" });
+  if (res.error) {
+    console.error(`Failed to launch ${browser}: ${res.error.message}`);
+    process.exit(1);
+  }
+  if (res.status !== 0 && res.status !== null) {
+    console.error(`${browser} exited with code ${res.status}`);
     process.exit(1);
   }
 

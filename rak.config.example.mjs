@@ -1,22 +1,22 @@
+// Template for rak.config.mjs (gitignored). Copied into place on first run.
+// Edit the copy, not this. Details: README "Config".
 export default {
-  // Default backend: "claude" or "local"
-  ai: "local",
+  // "claude" or "local". Order: RAK_AI -> commands below -> this.
+  ai: "claude",
 
-  // Fallback ticket prefix for branches and commits, e.g. CDC-1234/add-thing and
-  // "[CDC-1234] feat: ...". Set it per repo instead: git config rak.project CDC
+  // Ticket prefix fallback. Prefer per repo: git config rak.project CDC
   project: null,
 
-  // Per-command overrides (optional)
   commands: {
     review: "claude",
+    slim: "claude",
     // commit: "local",
     // pr: "local",
     // branch: "local",
-   //slim: "claude",
     // rebase: "claude",
   },
 
-  // Browser binary for `rak open` (e.g. "msedge", "chrome", "firefox")
+  // Fallback for sites below with no browser of their own.
   browser: "msedge",
 
   // `rak open`. Per-site browser, so each SSO lands where it is signed in.
@@ -30,9 +30,9 @@ export default {
     github: { url: "https://github.com/your-org/your-repo", browser: "msedge" },
   },
 
-  // Local LLM settings (used when ai: "local")
+  // Ollama, for the "local" backend. Override: RAK_AI_URL, RAK_AI_MODEL
   local: {
     url: "http://localhost:11434/api/chat",
-    model: "qwen3.6:35b-a3b",
+    model: "qwen2.5-coder:7b",
   },
 };

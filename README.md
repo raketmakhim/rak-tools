@@ -75,15 +75,23 @@ It shadows the `rak` binary with a function that runs `scripts/<command>.ps1` in
 
 ## Config
 
-`rak.config.mjs`:
+`rak.config.mjs` is gitignored, so your URLs, browsers and model choice stay local.
+The first `rak` run copies [`rak.config.example.mjs`](rak.config.example.mjs) into
+place and tells you; edit the copy. Delete it and run `rak` again to start over.
 
 ```js
 export default {
   ai: "local",                                   // default backend
   commands: { review: "claude", slim: "claude" }, // per-command overrides
+  browser: "msedge",                             // default browser for `rak open`
+  open: { jira: { url: "https://...", browser: "chrome" } },
   local: { url: "http://localhost:11434/api/chat", model: "qwen2.5-coder:14b" },
 };
 ```
+
+Import it from `load-config.mjs`, never from `rak.config.mjs` directly. A static
+import of a gitignored file fails at link time on a fresh clone, before anything
+can create it.
 
 Backend resolves as `RAK_AI` → `commands.<name>` → `ai` → `claude`. `rak ai` edits the file for you, keeping its comments:
 
@@ -146,12 +154,14 @@ For an AI command, add both prompt variants and call `ai(getPrompt("name"), inpu
 ## Structure
 
 ```
-cli.mjs              Entry point (rak binary)
-rak.config.mjs       Backend selection, local model settings
-util.mjs             Shared helpers
-cache.mjs            Per-command result caching
-commands/*.mjs       One file per subcommand
-scripts/aws.ps1      rak aws (PowerShell, sets AWS_PROFILE)
-scripts/profile.ps1  Shell integration, loaded from $PROFILE
-prompts/*.txt        <command>-claude.txt, <command>-local.txt
+cli.mjs                  Entry point (rak binary)
+load-config.mjs          Loads rak.config.mjs, creating it from the example
+rak.config.example.mjs   Config template, tracked in git
+rak.config.mjs           Your config: backends, model, browsers, open URLs (gitignored)
+util.mjs                 Shared helpers
+cache.mjs                Per-command result caching
+commands/*.mjs           One file per subcommand
+scripts/aws.ps1          rak aws (PowerShell, sets AWS_PROFILE)
+scripts/profile.ps1      Shell integration, loaded from $PROFILE
+prompts/*.txt            <command>-claude.txt, <command>-local.txt
 ```

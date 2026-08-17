@@ -1,0 +1,5 @@
+# Local config: personal URLs, browsers and model choice.
+# Template is rak.config.example.mjs, copied into place on first run.
+rak.config.mjs
+
+node_modules/

@@ -1,5 +1,5 @@
 import { spawnSync } from "child_process";
-import config from "../rak.config.mjs";
+import config from "../load-config.mjs";
 import { c } from "../util.mjs";
 
 const defaults = {
@@ -9,50 +9,76 @@ const defaults = {
   github: "https://github.com",
 };
 
-export default function open() {
-  const sites = { ...defaults, ...config.open };
-  const browser = config.browser || "msedge";
-  const names = Object.keys(sites);
+// A site is "https://..." or { url, browser }. Strings fall back to config.browser.
+function normalise(sites, fallback) {
+  return Object.entries(sites).map(([name, site]) => {
+    const { url, browser } = typeof site === "string" ? { url: site } : site || {};
+    if (!url) throw new Error(`Site "${name}" in rak.config.mjs has no url`);
+    return { name, url, browser: browser || fallback };
+  });
+}
 
-  if (!names.length) {
-    console.log("No sites configured. Add an 'open' section to rak.config.mjs");
-    return;
+// One launch per browser, not per URL: several URLs at once become tabs in one window.
+function groupByBrowser(sites) {
+  const groups = new Map();
+  for (const { url, browser } of sites) {
+    if (!groups.has(browser)) groups.set(browser, []);
+    groups.get(browser).push(url);
   }
+  return groups;
+}
 
-  console.log(`Opening ${names.length} tabs in ${browser}:\n`);
-  names.forEach((name) => console.log(`  ${c.cyan(name.padEnd(14))} ${c.grey(sites[name])}`));
-
-  const urls = Object.values(sites);
-
+// Returns an error string, or null when the browser launched.
+function launch(browser, urls) {
   if (process.platform === "linux") {
-    const failed = [];
-    for (const url of urls) {
-      const res = spawnSync("xdg-open", [url], { stdio: "inherit" });
-      if (res.error) failed.push(url);
-    }
-    if (failed.length) {
-      console.error(`\nFailed to launch: ${failed.join(", ")}`);
-      process.exit(1);
-    }
-    console.log(`\n${c.green("Done!")}`);
-    return;
+    // xdg-open ignores our choice of browser, so try the binary first.
+    const direct = spawnSync(browser, urls, { stdio: "inherit" });
+    if (!direct.error) return null;
+    const failed = urls.filter((url) => spawnSync("xdg-open", [url], { stdio: "inherit" }).error);
+    return failed.length ? `xdg-open could not open ${failed.join(", ")}` : null;
   }
 
-  // cmd.exe re-parses the whole line for its own operators (&, |, ^, ...)
-  // regardless of Node's argv quoting, so URLs need to be quoted ourselves
-  // and passed verbatim — otherwise a bare `&` in a query string (common in
-  // Jira/Confluence links) gets read as a command separator.
+  // cmd.exe re-parses the line for &, |, ^ whatever Node's argv quoting does, so
+  // quote URLs ourselves and pass verbatim. Otherwise a bare & in a Jira query
+  // string reads as a command separator.
   const [cmd, args, opts] = process.platform === "win32"
     ? ["cmd", ["/c", "start", '""', `"${browser}"`, ...urls.map((u) => `"${u}"`)], { windowsVerbatimArguments: true }]
     : ["open", ["-a", browser, ...urls], {}];
 
   const res = spawnSync(cmd, args, { stdio: "inherit", ...opts });
-  if (res.error) {
-    console.error(`Failed to launch ${browser}: ${res.error.message}`);
-    process.exit(1);
+  if (res.error) return `failed to launch ${browser}: ${res.error.message}`;
+  if (res.status !== 0 && res.status !== null) return `${browser} exited with code ${res.status}`;
+  return null;
+}
+
+export default function open() {
+  const sites = normalise({ ...defaults, ...config.open }, config.browser || "msedge");
+
+  if (!sites.length) {
+    console.log("No sites configured. Add an 'open' section to rak.config.mjs");
+    return;
   }
-  if (res.status !== 0 && res.status !== null) {
-    console.error(`${browser} exited with code ${res.status}`);
+
+  const groups = groupByBrowser(sites);
+  const tabs = `${sites.length} tab${sites.length === 1 ? "" : "s"}`;
+  const across = groups.size === 1
+    ? `in ${[...groups.keys()][0]}`
+    : `across ${groups.size} browsers`;
+  console.log(`Opening ${tabs} ${across}:\n`);
+
+  const width = Math.max(...sites.map((s) => s.browser.length));
+  for (const { name, url, browser } of sites) {
+    console.log(`  ${c.cyan(name.padEnd(14))} ${c.yellow(browser.padEnd(width))}  ${c.grey(url)}`);
+  }
+
+  const errors = [];
+  for (const [browser, urls] of groups) {
+    const err = launch(browser, urls);
+    if (err) errors.push(err);
+  }
+
+  if (errors.length) {
+    console.error(`\n${errors.join("\n")}`);
     process.exit(1);
   }
 

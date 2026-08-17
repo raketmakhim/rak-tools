@@ -4,7 +4,8 @@ import { pathToFileURL } from "url";
 import { spawnSync } from "child_process";
 import { existsSync } from "fs";
 import { join } from "path";
-import config from "./rak.config.mjs";
+// Never import rak.config.mjs directly: it is gitignored and may not exist yet.
+import config from "./load-config.mjs";
 import { getProject, c } from "./util.mjs";
 
 const __dirname = import.meta.dirname;
@@ -33,7 +34,7 @@ Commands:
   clean     Delete all merged branches
   commit    Generate a commit message and push changes  [${b("commit")}]
   history   Show git history for a file
-  open      Open daily tabs in Edge (calendar, jira, etc.)
+  open      Open daily tabs, each in its configured browser
   pr        Create a GitHub PR with AI-generated title/body  [${b("pr")}]
   rebase    Rebase with AI conflict resolution  [${b("rebase")}]
   review    AI code review of current changes  [${b("review")}]
